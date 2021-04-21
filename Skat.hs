@@ -1,3 +1,6 @@
+module Skat(play, mRamsch) where
+-- TODO mRamsch is unnec
+
 import Control.Exception
 import Data.List
 import Definitions
@@ -6,10 +9,6 @@ import Ramsch
 -- newtype GamemodeFarbspiel = GamemodeFarbspiel Suit
 -- data GamemodeGrand =     GamemodeGrand
 -- data GamemodeNull =      GamemodeNull
-
-
-slice start end = take (end - start + 1) . drop start
-
 
 
 playerFromPos :: SkatState -> PlayerPosition -> Player
@@ -50,23 +49,68 @@ reizen state pos (Reizwert x) = state {
 playerHasCard :: SkatState -> PlayerPosition -> Card -> Bool
 playerHasCard state pos card = card `elem` playerCards (playerFromPos state pos)
 
+gamemodeAllowsCard :: SkatState -> PlayerPosition -> Card -> Bool
+gamemodeAllowsCard state@RunningPhase{currentStich=stich, gameMode=gm} pos card = case stich of
+    [] -> True
+    lst -> let firstCardInStich = fst $ last lst
+               myCards          = playerCards (playerFromPos state pos)
+               compatCheck      = cardsCompatible gm
+           in
+            -- alles easy, Karte passt
+        compatCheck firstCardInStich card
+            -- drauflegen falls keine Karte mehr dort ist
+         || not (any (compatCheck firstCardInStich) myCards)
+gamemodeAllowsCard _ _ _ = False
+
+
 myAssert :: Bool -> String -> Hopefully ()
 myAssert True _ = Right ()
 myAssert False s = Left s
 
+determineWinner :: Stich -> (Card -> Card -> Bool) -> PlayerPosition
+determineWinner stich le
+    | not (firstcard `le` secondcard) && not (firstcard `le` thirdcard) = snd $ stich !! 2
+    | (firstcard `le` secondcard) && not (secondcard `le` thirdcard)    = snd $ stich !! 1
+    | (firstcard `le` thirdcard) && not (thirdcard `le` secondcard)     = snd $ head stich
+    | otherwise = error "No winner could be determined, something is very wrong."
+    where firstcard = fst $ stich !! 2
+          secondcard = fst $ stich !! 1
+          thirdcard = fst $ head stich
+
+addWonCardsToPlayer :: [Player] -> PlayerPosition -> [Card] -> [Player]
+addWonCardsToPlayer [] _ _ = []
+addWonCardsToPlayer (x:xs) pos cards = if playerPosition x == pos then x {
+            wonCards = cards ++ wonCards x
+        } : xs
+        else x : addWonCardsToPlayer xs pos cards
+
+removePlayedCard :: Card -> [Player] -> [Player]
+removePlayedCard card = map (deleteFun card)
+    where   deleteFun :: Card -> Player -> Player
+            deleteFun card player= player { playerCards = delete card (playerCards player) }
+
 play :: SkatState -> PlayerPosition -> Card -> Hopefully SkatState
-play state@RunningPhase{currentStich = stich, turn=whoseTurn} pos card = do
+play state@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=oldStich} pos card = do
     myAssert (pos == whoseTurn) "It is not your turn!"
     myAssert (playerHasCard state pos card) "You don't have this card, you h4x0r!"
-    -- GameState play
+    myAssert (gamemodeAllowsCard state pos card) "This card is not compatible to the already played cards"
+    let stich = (card, pos) : oldStich
+    let newstate = state {
+        players = removePlayedCard card $ players state
+    }
     if length stich == 3 then
-        return state {
-            turn = nextPos whoseTurn -- TODO
-        }
+        let winner = determineWinner stich $ cardSmaller gm
+            stichCards = map fst stich
+        in
+            return newstate {
+                turn = winner,
+                currentStich = [],
+                players = addWonCardsToPlayer (players state) winner stichCards
+            }
     else
-        return state {
+        return newstate {
             turn = nextPos whoseTurn,
-            currentStich = (card, pos) : stich
+            currentStich = stich
         }
 
 
@@ -105,26 +149,3 @@ play state@RunningPhase{currentStich = stich, turn=whoseTurn} pos card = do
 -}
 
 
-debugdeck = [Card name suit | name <- names, suit <- suits]
--- debugSkatState = ReizPhase {
---     players = [Player Geber (slice 0 9 debugdeck) [],
---                Player Vorhand (slice 10 19 debugdeck) [],
---                Player Mittelhand (slice 20 29 debugdeck) []
---               ],
---     skat = slice 30 31 debugdeck,
---     reizAnsager = Mittelhand,
---     reizHoerer = Vorhand,
---     hasReizAntwort = True,
---     highestBid = 0,
---     currentWinner = Nothing
--- }
-debugRamschState = RunningPhase {
-    players = [Player Geber (slice 0 9 debugdeck) [],
-            Player Vorhand (slice 10 19 debugdeck) [],
-            Player Mittelhand (slice 20 29 debugdeck) []
-            ],
-    singlePlayer = Nothing,
-    gameMode = mRamsch,
-    currentStich = [],
-    turn = Vorhand
-}
