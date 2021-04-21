@@ -1,3 +1,6 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+
 import Definitions
 import Skat
 import Serializer
@@ -41,3 +44,8 @@ turn2 = fromRight $ play turn1 Mittelhand (Card King Hearts)
 turn3 = fromRight $ play turn2 Geber (Card Eight Hearts)
 
 main = B.putStr $ encode turn3
+
+packet1 = "{\"action\":\"showcards\"}"
+packet2 = "{\"action\":\"playcard\", \"card\":{\"name\":\"Jack\",\"suit\":\"Hearts\"}}"
+res1 = eitherDecode packet1 :: Hopefully ReceivePacket
+res2 = eitherDecode packet2 :: Hopefully ReceivePacket

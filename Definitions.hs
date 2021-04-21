@@ -1,12 +1,18 @@
+{-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
+
 module Definitions(Suit(..), Name(..), Card(..), Player(..),
      Stich(..), Reizwert(..), GameMode(..), Hopefully(..),
-     PlayerPosition(..), SkatState(..), nextPos, suits, names, simpleCompatible, simpleCardLE) where
+     PlayerPosition(..), SkatState(..), ReceivePacket(..), nextPos, suits, names, simpleCompatible, simpleCardLE) where
 
 import Data.Maybe
 import Data.List
+import Data.Aeson
+import GHC.Generics
 
 data Suit = Diamonds | Hearts | Clubs | Spades
-    deriving (Eq, Show)
+    deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
 suitValue Diamonds = 9
 suitValue Hearts = 10
@@ -18,7 +24,7 @@ instance (Ord Suit) where
 
 
 data Name = Seven | Eight | Nine | Ten | Jack | Queen | King | Ace
-    deriving (Eq, Show)
+    deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
 nameValue Ten = 10
 nameValue Ace = 11
@@ -67,7 +73,7 @@ instance (Eq GameMode) where
     (==) x y = nicesShow x == nicesShow y
 
 
-data PlayerPosition = Geber | Vorhand | Mittelhand deriving (Eq, Show, Ord)
+data PlayerPosition = Geber | Vorhand | Mittelhand deriving (Eq, Show, Ord, Generic, FromJSON, ToJSON)
 nextPos :: PlayerPosition -> PlayerPosition
 nextPos Geber = Vorhand
 nextPos Vorhand = Mittelhand
@@ -95,6 +101,8 @@ data SkatState =
         currentStich :: Stich,
         turn :: PlayerPosition
     } deriving (Eq, Show)
+
+data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | DiscardSkat Card Card deriving (Show, Eq)
 
 -- For Ramsch, grand
 simpleCompatible :: Card -> Card -> Bool
