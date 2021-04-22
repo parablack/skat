@@ -1,4 +1,4 @@
-module Skat(play, gameModeFromString, playerFromPos,mRamsch) where
+module Skat(play, gameModeFromString, playerFromPos,mRamsch, ramschFromShuffledDeck) where
 -- TODO mRamsch is unnec
 
 import Control.Exception
@@ -107,7 +107,8 @@ play state@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=oldStich} pos 
             return newstate {
                 turn = winner,
                 currentStich = [],
-                players = addWonCardsToPlayer (players state) winner stichCards
+                playedStiche = stich : playedStiche newstate,
+                players = addWonCardsToPlayer (players newstate) winner stichCards
             }
     else
         return newstate {
@@ -116,4 +117,32 @@ play state@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=oldStich} pos 
         }
 
 
+slice start end = take (end - start + 1) . drop start
+
+ramschFromShuffledDeck :: [Card] -> SkatState
+ramschFromShuffledDeck deck = RunningPhase {
+    players = [Player Geber (slice 0 9 deck) [],
+            Player Vorhand (slice 10 19 deck) [],
+            Player Mittelhand (slice 20 29 deck) []
+            ],
+    singlePlayer = Nothing,
+    gameMode = mRamsch,
+    currentStich = [],
+    playedStiche = [],
+    turn = Vorhand
+}
+
+debugRamschState = ramschFromShuffledDeck deck
+-- debugSkatState = ReizPhase {
+--     players = [Player Geber (slice 0 9 debugdeck) [],
+--                Player Vorhand (slice 10 19 debugdeck) [],
+--                Player Mittelhand (slice 20 29 debugdeck) []
+--               ],
+--     skat = slice 30 31 debugdeck,
+--     reizAnsager = Mittelhand,
+--     reizHoerer = Vorhand,
+--     hasReizAntwort = True,
+--     highestBid = 0,
+--     currentWinner = Nothing
+-- }
 

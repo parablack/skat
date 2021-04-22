@@ -12,6 +12,8 @@ import Data.Text
 import Data.Text.Encoding (encodeUtf8)
 import Definitions
 import Network.WebSockets
+import System.Random
+import Data.Array.IO
 import Serializer
 import Skat
 
@@ -22,6 +24,7 @@ data Client = Client
     clientConn :: Connection
   }
 
+
 data ServerData = ServerData
   { clientNames :: Map ClientId String,
     clientRoles :: Map ClientId PlayerPosition,
@@ -31,31 +34,29 @@ data ServerData = ServerData
 
 type ServerState = StateT ServerData IO
 
--- TODO: remove
-slice start end = Data.List.take (end - start + 1) . Data.List.drop start
+shuffle :: [a] -> IO [a]
+shuffle xs = do
+        ar <- newArray n xs
+        forM [1..n] $ \i -> do
+            j <- randomRIO (i,n)
+            vi <- readArray ar i
+            vj <- readArray ar j
+            writeArray ar j vi
+            return vj
+  where
+    n = Data.List.length xs
+    newArray :: Int -> [a] -> IO (IOArray Int a)
+    newArray n xs =  newListArray (1,n) xs
 
-debugdeck = [Card name suit | name <- names, suit <- suits]
 
-debugRamschState =
-  RunningPhase
-    { players =
-        [ Player Geber (slice 0 9 debugdeck) [],
-          Player Vorhand (slice 10 19 debugdeck) [],
-          Player Mittelhand (slice 20 29 debugdeck) []
-        ],
-      singlePlayer = Nothing,
-      gameMode = mRamsch,
-      currentStich = [],
-      turn = Vorhand
-    }
-
-initialServer =
-  ServerData
-    { skatState = debugRamschState,
+initialServer = do
+  shuffled <- shuffle deck
+  return ServerData
+    { skatState = ramschFromShuffledDeck shuffled,
       clients = Data.Map.empty,
       clientRoles = Data.Map.empty,
       clientNames = Data.Map.empty
-    }
+    } :: IO ServerData
 
 println :: String -> ServerState ()
 println = lift . putStrLn
@@ -127,6 +128,9 @@ maxElem = Data.List.foldr (max . Just) Nothing
 
 -- play :: SkatState -> PlayerPosition -> Card -> Hopefully SkatState
 
+joinPositionName :: Map ClientId PlayerPosition -> Map ClientId String -> Map String String
+joinPositionName pos = mapKeys (show . (pos !))
+
 handlePlayerAction :: ClientId -> ReceivePacket -> ServerData -> Hopefully ServerData
 handlePlayerAction clientId (PlayCard card) state = do
   let player = clientRoles state ! clientId
@@ -167,15 +171,16 @@ handleEvent event = do
             Right newState -> put newState
             Left error -> replyError client error
   -- send out updated state
-  println "hi"
   clientList <- elems . clients <$> get
   skatState <- skatState <$> get
   _clientRoles <- clientRoles <$> get
+  _clientNames <- clientNames <$> get
   forM_
     clientList
     ( \client ->
         let player = (_clientRoles ! clientId client)
-         in reply client (encode (SkatStateForPlayer player skatState))
+            namemap = joinPositionName _clientRoles _clientNames
+         in reply client (encode (SkatStateForPlayer player skatState namemap))
     )
 
 -- TODO(pinguly+simon): handle client disconnect & bessere monade für client lookups
@@ -188,6 +193,7 @@ main = do
 
   forkIO $ runServer "0.0.0.0" 8080 $ acceptClient availIds eventQ
 
+  initialServer <- initialServer
   evalStateT
     (forever $ (lift . readChan) eventQ >>= handleEvent)
     initialServer

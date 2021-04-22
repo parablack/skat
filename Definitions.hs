@@ -5,10 +5,11 @@
 module Definitions(Suit(..), Name(..), Card(..), Player(..),
      Stich(..), Reizwert(..), GameMode(..), Hopefully(..),
      PlayerPosition(..), SkatState(..), SkatStateForPlayer(..), ReceivePacket(..),
-     nextPos, suits, names, simpleCompatible, simpleCardLE) where
+     deck, nextPos, suits, names, simpleCompatible, simpleCardLE) where
 
 import Data.Maybe
 import Data.List
+import Data.Map
 import Data.Aeson
 import GHC.Generics
 
@@ -46,6 +47,7 @@ data Card = Card Name Suit
 
 suits = [Clubs, Diamonds, Hearts, Spades]
 names = [Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
+deck = [Card name suit | name <- names, suit <- suits]
 
 
 
@@ -100,10 +102,11 @@ data SkatState =
         singlePlayer :: Maybe PlayerPosition,
         gameMode :: GameMode,
         currentStich :: Stich,
+        playedStiche :: [Stich],
         turn :: PlayerPosition
     } deriving (Eq, Show)
 
-data SkatStateForPlayer = SkatStateForPlayer PlayerPosition SkatState 
+data SkatStateForPlayer = SkatStateForPlayer PlayerPosition SkatState (Map String String)
 
 data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | DiscardSkat Card Card deriving (Show, Eq)
 
