@@ -26,10 +26,10 @@ data Client = Client
 
 
 data ServerData = ServerData
-  { clientNames :: Map ClientId String,
-    clientRoles :: Map ClientId PlayerPosition,
+  { clientNames :: Data.Map.Map ClientId String,
+    clientRoles :: Data.Map.Map ClientId PlayerPosition,
     skatState :: SkatState,
-    clients :: Map ClientId Client
+    clients :: Data.Map.Map ClientId Client
   }
 
 type ServerState = StateT ServerData IO
@@ -57,6 +57,21 @@ initialServer = do
       clientRoles = Data.Map.empty,
       clientNames = Data.Map.empty
     } :: IO ServerData
+
+{-
+initialServer = do
+  return ServerData
+    { skatState = GameFinishedState {
+      players = playersFromDeck deck,
+      lastStich = [],
+      scores = Data.Map.insert Vorhand 1000 $ Data.Map.singleton Geber 100,
+      winner = Geber
+    },
+      clients = Data.Map.empty,
+      clientRoles = Data.Map.empty,
+      clientNames = Data.Map.empty
+    } :: IO ServerData
+-}
 
 println :: String -> ServerState ()
 println = lift . putStrLn
@@ -117,18 +132,21 @@ acceptClient availIds eventQ pending = do
     Nothing -> do
       rejectRequestWith pending defaultRejectRequest
 
-updateClients :: (Map ClientId Client -> Map ClientId Client) -> ServerState ()
+updateClients :: (Data.Map.Map ClientId Client -> Data.Map.Map ClientId Client) -> ServerState ()
 updateClients modifier = modify (\state -> state {clients = modifier (clients state)})
 
-updateClientRoles :: (Map ClientId PlayerPosition -> Map ClientId PlayerPosition) -> ServerState ()
+updateClientRoles :: (Data.Map.Map ClientId PlayerPosition -> Data.Map.Map ClientId PlayerPosition) -> ServerState ()
 updateClientRoles modifier = modify (\state -> state {clientRoles = modifier (clientRoles state)})
+
+updateClientNames :: (Data.Map.Map ClientId String -> Data.Map.Map ClientId String) -> ServerState ()
+updateClientNames modifier = modify (\state -> state {clientNames = modifier (clientNames state)})
 
 maxElem :: Ord a => [a] -> Maybe a
 maxElem = Data.List.foldr (max . Just) Nothing
 
 -- play :: SkatState -> PlayerPosition -> Card -> Hopefully SkatState
 
-joinPositionName :: Map ClientId PlayerPosition -> Map ClientId String -> Map String String
+joinPositionName :: Data.Map.Map ClientId PlayerPosition -> Data.Map.Map ClientId String -> Data.Map.Map String String
 joinPositionName pos = mapKeys (show . (pos !))
 
 handlePlayerAction :: ClientId -> ReceivePacket -> ServerData -> Hopefully ServerData
@@ -149,17 +167,14 @@ handleEvent event = do
     Connect client -> do
       println $ "Client " ++ show (clientId client) ++ ": connected!"
       updateClients (Data.Map.insert (clientId client) client)
-      clientPos <-
-        maybe Geber nextPos
-          . maxElem
-          . elems
-          . clientRoles
-          <$> get
-      let meme = clientPos :: PlayerPosition
+      assignedPositions <- elems . clientRoles <$> get
+      let clientPos = Data.List.head $ [Geber, Vorhand, Mittelhand] Data.List.\\ assignedPositions
       updateClientRoles (Data.Map.insert (clientId client) clientPos)
     Disconnect client cause -> do
       println $ "Client " ++ show (clientId client) ++ " " ++ show cause ++ ": disconnected!"
       updateClients (Data.Map.delete (clientId client))
+      updateClientRoles (Data.Map.delete (clientId client))
+      updateClientNames (Data.Map.delete (clientId client))
     Message client s -> do
       -- TODO(bennofs): fix
       let action = decode (B.fromStrict (Data.Text.Encoding.encodeUtf8 (Data.Text.pack s))) :: Maybe ReceivePacket
@@ -183,8 +198,8 @@ handleEvent event = do
          in reply client (encode (SkatStateForPlayer player skatState namemap))
     )
 
--- TODO(pinguly+simon): handle client disconnect & bessere monade für client lookups
-
+-- TODO(pinguly+simon): handle client disconnect(gemacht??) & bessere monade für client lookups
+-- TODO(pinguly) token zurückgeben bei disconnect
 main = do
   eventQ <- newChan :: IO (Chan Event)
   availIds <- newMVar [1 .. 3] :: IO (MVar [ClientId])

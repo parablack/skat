@@ -5,7 +5,7 @@
 module Definitions(Suit(..), Name(..), Card(..), Player(..),
      Stich(..), Reizwert(..), GameMode(..), Hopefully(..),
      PlayerPosition(..), SkatState(..), SkatStateForPlayer(..), ReceivePacket(..),
-     deck, nextPos, suits, names, simpleCompatible, simpleCardLE) where
+     deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE) where
 
 import Data.Maybe
 import Data.List
@@ -18,8 +18,8 @@ data Suit = Diamonds | Hearts | Clubs | Spades
 
 suitValue Diamonds = 9
 suitValue Hearts = 10
-suitValue Clubs = 11
-suitValue Spades = 12
+suitValue Spades = 11
+suitValue Clubs = 12
 
 instance (Ord Suit) where
     (<=) x y = suitValue x <= suitValue y
@@ -68,6 +68,7 @@ data GameMode = GameMode {
     -- compare the two cards,
     cardSmaller :: Card -> Card -> Bool,
     scoreMultiplier :: Int,
+    determineGameWinner :: Map PlayerPosition Int -> PlayerPosition,
     nicesShow :: String
 }
 instance (Show GameMode) where
@@ -109,7 +110,7 @@ data SkatState =
         players :: [Player],
         lastStich :: Stich,
         scores :: Map PlayerPosition Int,
-        winner :: Player
+        winner :: PlayerPosition
     }
     deriving (Eq, Show)
 

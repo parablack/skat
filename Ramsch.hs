@@ -1,11 +1,18 @@
 module Ramsch(mRamsch) where
 
 import Definitions
+import Data.Map
+import Data.List
+import Data.Ord
+
+canonicalWinner :: Map PlayerPosition Int -> PlayerPosition
+canonicalWinner = fst . maximumBy (comparing snd) . assocs
 
 mRamsch = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
     scoreMultiplier = 1,
+    determineGameWinner = fst . minimumBy (comparing snd) . assocs,
     nicesShow = "Ramsch"
 }
 

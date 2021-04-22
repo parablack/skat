@@ -10,6 +10,7 @@ import Definitions
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Text
+import qualified Data.Map
 import qualified Data.ByteString.Lazy as B
 import Skat
 
@@ -55,7 +56,7 @@ instance ToJSON SkatStateForPlayer where
             "you" .= playerFromPos state player,
             "currentStich" .= lastStich state,
             "yourTurn" .= False,
-            "scores" .= scores state,
+            "scores" .= Data.Map.mapKeys show (scores state),
             "winner" .= winner state,
             "names" .= names
         ]

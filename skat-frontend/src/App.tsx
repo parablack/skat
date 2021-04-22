@@ -1,9 +1,10 @@
 import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
-import { DEBUG_STATE, ICard } from './State';
+import { DEBUG_STATE, ICard, Stich } from './State';
 import { Card } from './Card';
 import { Hand } from './Hand';
+import { Scoreboard } from './Scoreboard';
 
 
 const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
@@ -43,7 +44,18 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     return () => ws.close()
   }, [ws])
 
-  let displayStich = state.currentStich.length === 0 ? state.lastStich : state.currentStich;
+  let displayStich:Stich = [];
+  let whoIsDran = "Das hier darfst du nicht sehen!";
+  let sieSpielen = "Noch nix"
+  if (state.phase === "running") {
+    whoIsDran = state.yourTurn ? `Aluurm! Du bist dran!` : resolveNickname(state.turn) + " ist dran."
+    displayStich = state.currentStich.length === 0 ? state.lastStich : state.currentStich;
+    sieSpielen = state.gamemode
+  } else if (state.phase === "finished") {
+    whoIsDran = resolveNickname(state.winner) + " hat gewonnen!"
+    displayStich = state.currentStich
+    sieSpielen = "Nix mehr, das Spiel ist nämlich vorbei!"
+  }
 
   return (
     <div className="App">
@@ -58,25 +70,30 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
         height: '100vh',
       }}>
         <header>
-          Wilkommen im Ramschsimulator 3000
+          Wilkommen auf der Ramschinsel!
           <br />
-          <small>Heute spielen Sie: {state.gamemode}</small>
+          <small>Heute spielen Sie: {sieSpielen}</small>
         </header>
-        {
-        }
+
         <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />
         <p>
-          {state.yourTurn ? `Aluurm! Du bist dran!` : resolveNickname(state.turn) + " ist dran."}
+          {whoIsDran}
           <br />
           <small>
             {resolveNickname(state.you.position)} <button onClick={(_) => {
-              ws.send(JSON.stringify({
-                action: "setname",
-                name: prompt("Enter your name"),
-              }))
+              let name = prompt("Enter your name")
+              if(name) {
+                ws.send(JSON.stringify({
+                  action: "setname",
+                  name,
+                }))
+                localStorage.setItem("nickname", name)
+              }
             }}>Change Name</button>
           </small>
         </p>
+
+        { state.phase === "finished" ? <Scoreboard state={state} /> : ""}
         <span style={{ margin: '4em' }}>
           <Hand cards={state.you.cards} onClickCard={card => {
             console.log("clicked card", card)
@@ -85,6 +102,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
               card,
             }))
           }} />
+
         </span>
       </section>
     </div>

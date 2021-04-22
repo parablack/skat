@@ -1,8 +1,9 @@
-module Skat(play, gameModeFromString, playerFromPos,mRamsch, ramschFromShuffledDeck) where
+module Skat(play, gameModeFromString, playerFromPos,mRamsch, ramschFromShuffledDeck, playersFromDeck) where
 -- TODO mRamsch is unnec
 
 import Control.Exception
 import Data.List
+import qualified Data.Map
 import Definitions
 import Ramsch
 
@@ -91,40 +92,68 @@ removePlayedCard card = map (deleteFun card)
     where   deleteFun :: Card -> Player -> Player
             deleteFun card player= player { playerCards = delete card (playerCards player) }
 
-play :: SkatState -> PlayerPosition -> Card -> Hopefully SkatState
-play state@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=oldStich} pos card = do
-    myAssert (pos == whoseTurn) "It is not your turn!"
-    myAssert (playerHasCard state pos card) "You don't have this card, you h4x0r!"
-    myAssert (gamemodeAllowsCard state pos card) "This card is not compatible to the already played cards"
-    let stich = (card, pos) : oldStich
-    let newstate = state {
-        players = removePlayedCard card $ players state
+hasGameEnded :: SkatState -> Bool
+hasGameEnded state@RunningPhase{playedStiche = stiche} = length stiche == 10
+hasGameEnded _     = False
+
+scoreForPlayer :: Player -> Int
+scoreForPlayer Player{wonCards=cards} = sum $ map (\(Card name _) -> nameValue name) cards
+
+checkGameEnd :: SkatState -> SkatState
+checkGameEnd state = if hasGameEnded state then
+    let scoresTuple = map (\x -> (playerPosition x, scoreForPlayer x)) $ players state
+        scores = foldl (\ls (player, score) -> Data.Map.insert player score ls) Data.Map.empty scoresTuple
+        winner = determineGameWinner (gameMode state) scores
+     in
+    GameFinishedState {
+        players = players state,
+        lastStich = head $ playedStiche state,
+        scores = scores,
+        winner = winner
     }
-    if length stich == 3 then
+    else state
+
+playRawOnState :: SkatState -> PlayerPosition -> Card -> SkatState
+playRawOnState oldstate@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=oldStich} pos card
+    | length stich == 3 =
         let winner = determineWinner stich $ cardSmaller gm
             stichCards = map fst stich
         in
-            return newstate {
+            newstate {
                 turn = winner,
                 currentStich = [],
                 playedStiche = stich : playedStiche newstate,
                 players = addWonCardsToPlayer (players newstate) winner stichCards
             }
-    else
-        return newstate {
+    | otherwise         = newstate {
             turn = nextPos whoseTurn,
             currentStich = stich
         }
+    where stich    = (card, pos) : oldStich
+          newstate = oldstate {
+                        players = removePlayedCard card $ players oldstate
+                     }
 
+play :: SkatState -> PlayerPosition -> Card -> Hopefully SkatState
+play state@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=oldStich} pos card = do
+    myAssert (pos == whoseTurn) "It is not your turn!"
+    myAssert (playerHasCard state pos card) "You don't have this card, you h4x0r!"
+    myAssert (gamemodeAllowsCard state pos card) "This card is not compatible to the already played cards"
+    let newstate = playRawOnState state pos card
+        newstateChecked = checkGameEnd newstate
+    return newstateChecked
 
 slice start end = take (end - start + 1) . drop start
 
-ramschFromShuffledDeck :: [Card] -> SkatState
-ramschFromShuffledDeck deck = RunningPhase {
-    players = [Player Geber (slice 0 9 deck) [],
+playersFromDeck :: [Card] -> [Player]
+playersFromDeck deck = [Player Geber (slice 0 9 deck) [],
             Player Vorhand (slice 10 19 deck) [],
             Player Mittelhand (slice 20 29 deck) []
-            ],
+            ]
+
+ramschFromShuffledDeck :: [Card] -> SkatState
+ramschFromShuffledDeck deck = RunningPhase {
+    players = playersFromDeck deck,
     singlePlayer = Nothing,
     gameMode = mRamsch,
     currentStich = [],
