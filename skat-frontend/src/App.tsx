@@ -6,13 +6,13 @@ import { Card } from './Card';
 import { Hand } from './Hand';
 
 
-const TableStack: React.FC<{ cards: ICard[] }> = ({ cards }) => {
+const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
   return <div style={{ fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin' }}>
     {cards.length ? (
       <span style={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', justifyContent: 'center' }}>
-        {cards.map((card, index) => {
+        {cards.map(([card, name], index) => {
           return <span style={{}} key={index}>
-            <Card card={card} player={["Simon", "pinguly", "mflo"][index % 3]}></Card>
+            <Card card={card} player={name}></Card>
           </span>
         })}
       </span>
@@ -25,6 +25,8 @@ const TableStack: React.FC<{ cards: ICard[] }> = ({ cards }) => {
 export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   const [state, setState] = useState(DEBUG_STATE) /* TODO: remove DEBUG_STATE */
   // const [nickname, setNickname] = useState(undefined)
+
+  let resolveNickname = (pos:string) => state.names[pos] || pos
 
   useEffect(() => {
 
@@ -40,6 +42,8 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
 
     return () => ws.close()
   }, [ws])
+
+  let displayStich = state.currentStich.length === 0 ? state.lastStich : state.currentStich;
 
   return (
     <div className="App">
@@ -58,12 +62,19 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
           <br />
           <small>Heute spielen Sie: {state.gamemode}</small>
         </header>
-        <TableStack cards={state.currentStich.map(([card, _player]) => card)} />
+        {
+        }
+        <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />
         <p>
-          {state.yourTurn ? `Aluurm! Du bist dran!` : state.turn + " ist dran."}
+          {state.yourTurn ? `Aluurm! Du bist dran!` : resolveNickname(state.turn) + " ist dran."}
           <br />
           <small>
-            {state.you.position}
+            {resolveNickname(state.you.position)} <button onClick={(_) => {
+              ws.send(JSON.stringify({
+                action: "setname",
+                name: prompt("Enter your name"),
+              }))
+            }}>Change Name</button>
           </small>
         </p>
         <span style={{ margin: '4em' }}>

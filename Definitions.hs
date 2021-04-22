@@ -76,7 +76,7 @@ instance (Eq GameMode) where
     (==) x y = nicesShow x == nicesShow y
 
 
-data PlayerPosition = Geber | Vorhand | Mittelhand deriving (Eq, Show, Ord, Generic, FromJSON, ToJSON)
+data PlayerPosition = Geber | Vorhand | Mittelhand deriving (Eq, Show, Ord, Generic, FromJSON, ToJSON, ToJSONKey)
 nextPos :: PlayerPosition -> PlayerPosition
 nextPos Geber = Vorhand
 nextPos Vorhand = Mittelhand
@@ -104,7 +104,14 @@ data SkatState =
         currentStich :: Stich,
         playedStiche :: [Stich],
         turn :: PlayerPosition
-    } deriving (Eq, Show)
+    } |
+    GameFinishedState {
+        players :: [Player],
+        lastStich :: Stich,
+        scores :: Map PlayerPosition Int,
+        winner :: Player
+    }
+    deriving (Eq, Show)
 
 data SkatStateForPlayer = SkatStateForPlayer PlayerPosition SkatState (Map String String)
 

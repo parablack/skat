@@ -19,6 +19,7 @@ instance ToJSON GameMode where
     toJSON = Data.Aeson.String . pack . nicesShow
 
 
+
 instance ToJSON Player where
     toJSON Player{playerPosition = pos, playerCards = cards, wonCards = won} = object ["position" .= pos, "cards" .= cards, "woncards" .= won]
 
@@ -40,14 +41,25 @@ instance ToJSON SkatStateForPlayer where
             "phase" .= pack "running",
             "you" .= playerFromPos state player,
             "gamemode" .= gameMode state,
-            "currentStich" .= currentStich state,
+            "currentStich" .= Data.List.reverse (currentStich state),
             "lastStich" .= case playedStiche state of
                 [] -> []
-                (x:xs) -> x,
+                (x:xs) -> Data.List.reverse x,
             "yourTurn" .=  (player == turn state),
             "turn" .= turn state,
             "names" .= names
         ]
+    toJSON (SkatStateForPlayer player state@GameFinishedState{} names) =
+        object [
+            "phase" .= pack "finished",
+            "you" .= playerFromPos state player,
+            "currentStich" .= lastStich state,
+            "yourTurn" .= False,
+            "scores" .= scores state,
+            "winner" .= winner state,
+            "names" .= names
+        ]
+
 
 instance FromJSON Card where
     parseJSON (Object card) =
