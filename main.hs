@@ -63,14 +63,24 @@ println = lift . putStrLn
 reply :: WebSocketsData a => Client -> a -> ServerState ()
 reply client = lift . sendTextData (clientConn client)
 
+replyError :: Client -> String -> ServerState ()
+replyError client error =
+  reply
+    client
+    ( encode
+        ( object
+            [ Data.Text.pack "error" .= error
+            ]
+        )
+    )
+
 disconnect :: Client -> ServerState ()
 disconnect client = lift $ sendClose (clientConn client) Data.Text.empty
 
 data Event
   = Connect Client
-  | Disconnect Client
+  | Disconnect Client ConnectionException
   | Message Client String
-  | Exception Client ConnectionException
 
 recvEvent :: Client -> IO Event
 recvEvent client = do
@@ -78,10 +88,11 @@ recvEvent client = do
   return $ Message client (Data.Text.unpack text)
 
 generateEvents :: Client -> (Event -> IO ()) -> IO ()
-generateEvents client notify = do
-  notify $ Connect client
-  forever (recvEvent client >>= notify) `catch` (notify . Exception client)
-  notify $ Disconnect client
+generateEvents client notify =
+  do
+    notify $ Connect client
+    forever (recvEvent client >>= notify)
+    `catch` (notify . Disconnect client)
 
 takeId :: MVar [ClientId] -> IO (Maybe ClientId)
 takeId ids = modifyMVar ids modify
@@ -142,26 +153,19 @@ handleEvent event = do
           <$> get
       let meme = clientPos :: PlayerPosition
       updateClientRoles (Data.Map.insert (clientId client) clientPos)
-    Disconnect client -> do
-      println $ "Client " ++ show (clientId client) ++ ": disconnected!"
-      modify
-        ( \state ->
-            state
-              { clients = Data.Map.delete (clientId client) (clients state)
-              }
-        )
-    Exception client err -> do
-      println $ "Client " ++ show (clientId client) ++ ": " ++ show err
+    Disconnect client cause -> do
+      println $ "Client " ++ show (clientId client) ++ " " ++ show cause ++ ": disconnected!"
+      updateClients (Data.Map.delete (clientId client))
     Message client s -> do
       -- TODO(bennofs): fix
       let action = decode (B.fromStrict (Data.Text.Encoding.encodeUtf8 (Data.Text.pack s))) :: Maybe ReceivePacket
       case action of
-        Nothing -> reply client (Data.Text.pack "REEEEEEEEEe")
+        Nothing -> replyError client "couldn't deserialize action"
         Just action -> do
           state <- get
           case handlePlayerAction (clientId client) action state of
             Right newState -> put newState
-            Left error -> reply client (Data.Text.pack ("REEeeee" ++ error))
+            Left error -> replyError client error
   -- send out updated state
   println "hi"
   clientList <- elems . clients <$> get
@@ -180,9 +184,9 @@ main = do
   eventQ <- newChan :: IO (Chan Event)
   availIds <- newMVar [1 .. 3] :: IO (MVar [ClientId])
 
-  putStrLn "Listening on 127.0.0.1:8080"
+  putStrLn "Listening on 0.0.0.0:8080"
 
-  forkIO $ runServer "127.0.0.1" 8080 $ acceptClient availIds eventQ
+  forkIO $ runServer "0.0.0.0" 8080 $ acceptClient availIds eventQ
 
   evalStateT
     (forever $ (lift . readChan) eventQ >>= handleEvent)

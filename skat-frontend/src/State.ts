@@ -18,4 +18,4 @@ export interface IState {
     yourTurn: boolean,
 }
 export const DEBUG_STATE: IState =
-    { "yourTurn": true, "gamemode": "Ramsch", "phase": "running", "currentStich": [], "you": { "cards": [{ "suit": "Hearts", "name": "Nine" }, { "suit": "Spades", "name": "Nine" }, { "suit": "Clubs", "name": "Ten" }, { "suit": "Diamonds", "name": "Ten" }, { "suit": "Hearts", "name": "Ten" }, { "suit": "Spades", "name": "Ten" }, { "suit": "Clubs", "name": "Jack" }, { "suit": "Diamonds", "name": "Jack" }, { "suit": "Hearts", "name": "Jack" }, { "suit": "Spades", "name": "Jack" }], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand" }
+    { "yourTurn": false, "gamemode": "Ramsch", "phase": "running", "currentStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand" }

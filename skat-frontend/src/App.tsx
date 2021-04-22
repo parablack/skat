@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { DEBUG_STATE, ICard } from './State';
 import { Card } from './Card';
 import { Hand } from './Hand';
@@ -11,7 +11,7 @@ const TableStack: React.FC<{ cards: ICard[] }> = ({ cards }) => {
     {cards.length ? (
       <span style={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', justifyContent: 'center' }}>
         {cards.map((card, index) => {
-          return <span style={{}}>
+          return <span style={{}} key={index}>
             <Card card={card} player={["Simon", "pinguly", "mflo"][index % 3]}></Card>
           </span>
         })}
@@ -22,8 +22,24 @@ const TableStack: React.FC<{ cards: ICard[] }> = ({ cards }) => {
   </div>
 }
 
-function App() {
-  let state = DEBUG_STATE
+export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
+  const [state, setState] = useState(DEBUG_STATE) /* TODO: remove DEBUG_STATE */
+  // const [nickname, setNickname] = useState(undefined)
+
+  useEffect(() => {
+
+    ws.onmessage = e => {
+      console.log(e.data)
+      let newState = JSON.parse(e.data)
+      if (newState.error) {
+        alert(newState.error)
+      } else {
+        setState(newState)
+      }
+    }
+
+    return () => ws.close()
+  }, [ws])
 
   return (
     <div className="App">
@@ -44,14 +60,22 @@ function App() {
         </header>
         <TableStack cards={state.currentStich.map(([card, _player]) => card)} />
         <p>
-          Aluurm! Du bist dran!
+          {state.yourTurn ? `Aluurm! Du bist dran!` : state.turn + " ist dran."}
+          <br />
+          <small>
+            {state.you.position}
+          </small>
         </p>
         <span style={{ margin: '4em' }}>
-          <Hand cards={state.you.cards} />
+          <Hand cards={state.you.cards} onClickCard={card => {
+            console.log("clicked card", card)
+            ws.send(JSON.stringify({
+              action: "playcard",
+              card,
+            }))
+          }} />
         </span>
       </section>
     </div>
   );
 }
-
-export default App;

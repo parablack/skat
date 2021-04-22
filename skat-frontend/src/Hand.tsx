@@ -48,7 +48,7 @@ function arclengthParam(t: number, a_: number, b_: number) {
     return 1;
 }
 
-export const Hand: React.FC<{ cards: ICard[] }> = ({ cards }) => {
+export const Hand: React.FC<{ cards: ICard[], onClickCard: (card: ICard) => void }> = ({ cards, onClickCard }) => {
     return <div style={{ display: 'flex', fontSize: '.8em', width: 'var(--cards-width)' }}>
         {
             cards.map((card, index) => {
@@ -61,12 +61,12 @@ export const Hand: React.FC<{ cards: ICard[] }> = ({ cards }) => {
                 let [dx, dy] = df(u, a, b);
                 let r = -Math.atan2(dy, dx);
 
-                return <span style={{
+                return <span key={index} style={{
                     transform: `translate(${(x - index) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad)`,
                     transformOrigin: 'center center',
                     width: ""
                 }}>
-                    <Card card={card} onClick={() => alert("aluurm " + JSON.stringify(card))}></Card>
+                    <Card card={card} onClick={() => onClickCard(card)}></Card>
                 </span>
             })}
     </div>
