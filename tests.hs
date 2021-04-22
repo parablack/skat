@@ -43,7 +43,7 @@ turn1 = fromRight $ play debugRamschState Vorhand (Card Ten Hearts)
 turn2 = fromRight $ play turn1 Mittelhand (Card King Hearts)
 turn3 = fromRight $ play turn2 Geber (Card Eight Hearts)
 
-main = B.putStr $ encode turn3
+main = B.putStr $ encode (SkatStateForPlayer Vorhand debugRamschState)
 
 packet1 = "{\"action\":\"showcards\"}"
 packet2 = "{\"action\":\"playcard\", \"card\":{\"name\":\"Jack\",\"suit\":\"Hearts\"}}"

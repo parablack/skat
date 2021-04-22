@@ -4,7 +4,8 @@
 
 module Definitions(Suit(..), Name(..), Card(..), Player(..),
      Stich(..), Reizwert(..), GameMode(..), Hopefully(..),
-     PlayerPosition(..), SkatState(..), ReceivePacket(..), nextPos, suits, names, simpleCompatible, simpleCardLE) where
+     PlayerPosition(..), SkatState(..), SkatStateForPlayer(..), ReceivePacket(..),
+     nextPos, suits, names, simpleCompatible, simpleCardLE) where
 
 import Data.Maybe
 import Data.List
@@ -101,6 +102,8 @@ data SkatState =
         currentStich :: Stich,
         turn :: PlayerPosition
     } deriving (Eq, Show)
+
+data SkatStateForPlayer = SkatStateForPlayer PlayerPosition SkatState 
 
 data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | DiscardSkat Card Card deriving (Show, Eq)
 

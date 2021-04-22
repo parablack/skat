@@ -1,4 +1,4 @@
-module Skat(play, gameModeFromString, mRamsch) where
+module Skat(play, gameModeFromString, playerFromPos,mRamsch) where
 -- TODO mRamsch is unnec
 
 import Control.Exception

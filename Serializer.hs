@@ -24,8 +24,26 @@ instance ToJSON Player where
 
 instance ToJSON SkatState where
     toJSON state@ReizPhase{players=players} = object ["phase" .= pack "reiz", "players" .= players]
-    toJSON state@RunningPhase{players=players,gameMode=gameMode, currentStich=stich, turn=turn} = object ["phase" .= pack "running", "players" .= players, "gamemode" .= gameMode, "currentstich" .= stich, "turn" .= turn]
+    toJSON state@RunningPhase{} =
+        object [
+            "phase" .= pack "running",
+            "players" .= players state,
+            "gamemode" .= gameMode state,
+            "currentstich" .= currentStich state,
+            "turn" .= turn state
+        ]
 
+instance ToJSON SkatStateForPlayer where
+    toJSON (SkatStateForPlayer player state@ReizPhase{players=players}) = object ["phase" .= pack "reiz", "you" .= playerFromPos state player]
+    toJSON (SkatStateForPlayer player state@RunningPhase{}) =
+        object [
+            "phase" .= pack "running",
+            "you" .= playerFromPos state player,
+            "gamemode" .= gameMode state,
+            "currentStich" .= currentStich state,
+            "yourTurn" .=  (player == turn state),
+            "turn" .= turn state
+        ]
 
 instance FromJSON Card where
     parseJSON (Object card) =
