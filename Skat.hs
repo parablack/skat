@@ -19,34 +19,48 @@ playerFromPos state pos = case find ((== pos) . playerPosition) (players state) 
     Nothing -> error $ "No player at position " ++ show pos ++ " found!"
     Just player -> player
 
--- for the current reizAnsager
-maxReizValue :: SkatState -> Int
-maxReizValue _ = 100 -- TODO
-
 canReizen :: SkatState -> PlayerPosition -> Reizwert -> Bool
-canReizen ReizPhase{hasReizAntwort=False} player value = False
-canReizen state@ReizPhase{reizAnsager=ansager} player value
-    | player == ansager    = case value of
+canReizen ReizPhase{reizAnsagerTurn=False} _ _ = False
+canReizen state@ReizPhase{reizStateMachine=machine} player value
+    | activeReizPlayer machine == player = case value of
         Weg -> True
-        Reizwert wert -> wert > highBid && wert <= maxReiz
+        Reizwert wert -> wert > highBid
     | otherwise            = False
-    where highBid = highestBid state
-          maxReiz = maxReizValue state
+    where highBid = reizCurrentBid state
 canReizen _ _ _ = False
 
-reizen :: SkatState -> PlayerPosition -> Reizwert -> SkatState
-reizen state Mittelhand Weg = state {
-    reizAnsager = Geber
+-- player that won the reizen
+skatPickingFromReiz :: SkatState -> PlayerPosition -> SkatState
+skatPickingFromReiz state singlePlayer = SkatPickingPhase {
+    players = players state,
+    skat = skat state,
+    singlePlayer = Just singlePlayer
 }
-reizen state Geber Weg = state {
-    reizAnsager = Vorhand
-}
-reizen state Vorhand Weg = error "Ramsch not implemented yet!" -- TODO
-reizen state pos (Reizwert x) = state {
-    highestBid = x,
-    currentWinner = Just pos,
-    hasReizAntwort = False
-}
+
+reizen :: SkatState -> PlayerPosition -> Reizwert -> Hopefully SkatState
+reizen state@ReizPhase{reizStateMachine=machine} player val = do
+    myAssert (canReizen state player val) "Du darfst aktuell kein Reizgebot abgeben!"
+    case val of
+        Reizwert x ->
+            if machine == VorhandNix then
+                return $ skatPickingFromReiz state Vorhand
+            else return state{reizCurrentBid = x, reizAnsagerTurn = False}
+        Weg        ->
+            return $ case machine of
+                VorhandNix -> state -- TODO Ramsch
+                MittelhandVorhand -> state {
+                    reizStateMachine = GeberVorhand,
+                    reizAnsagerTurn = False
+                }
+                GeberVorhand -> state {
+                    reizStateMachine = VorhandNix,
+                    reizAnsagerTurn = False
+                } -- TODO hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
+                MittelhandGeber -> state -- TODO Geber spielt
+reizen state Vorhand Weg = Left "pattern in Reizen does not match"
+
+-- Bool: ja / nein?
+-- reizenAntwort :: SkatState -> PlayerPosition -> Bool -> SkatState
 
 
 playerHasCard :: SkatState -> PlayerPosition -> Card -> Bool
