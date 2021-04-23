@@ -5,7 +5,8 @@
 module Definitions(Suit(..), Name(..), Card(..), Player(..),
      Stich(..), Reizwert(..), GameMode(..), Hopefully(..),
      PlayerPosition(..), SkatState(..), SkatStateForPlayer(..), ReceivePacket(..),
-     deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE) where
+     ReizStateMachine(..),
+     deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer) where
 
 import Data.Maybe
 import Data.List
@@ -90,11 +91,9 @@ data SkatState =
     ReizPhase {
         players :: [Player],
         skat :: [Card],
-        reizAnsager :: PlayerPosition,
-        reizHoerer :: PlayerPosition,
-        hasReizAntwort :: Bool,
-        highestBid :: Int,
-        currentWinner :: Maybe PlayerPosition
+        reizStateMachine :: ReizStateMachine,
+        reizAnsagerTurn :: Bool,
+        reizCurrentBid :: Int
     } |
     SkatPickingPhase {
         players :: [Player],
@@ -123,6 +122,15 @@ data SkatStateForPlayer = SkatStateForPlayer {
     playerNames :: Map String String,
     resigningPlayers :: Int
 }
+
+-- XY: X sagt, Y hört
+data ReizStateMachine = MittelhandVorhand | MittelhandGeber | GeberVorhand | VorhandNix deriving(Eq, Show)
+activeReizPlayer :: ReizStateMachine -> PlayerPosition
+activeReizPlayer MittelhandVorhand = Mittelhand
+activeReizPlayer MittelhandGeber = Mittelhand
+activeReizPlayer GeberVorhand = Geber
+activeReizPlayer VorhandNix = Vorhand
+
 
 data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | Resign | DiscardSkat Card Card deriving (Show, Eq)
 
