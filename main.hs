@@ -48,7 +48,7 @@ shuffle xs = do
   where
     n = Data.List.length xs
     newArray :: Int -> [a] -> IO (IOArray Int a)
-    newArray n xs =  newListArray (1,n) xs
+    newArray n xs =  newListArray (1, n) xs
 
 
 initialServer = do
@@ -87,7 +87,10 @@ println :: String -> ServerState ()
 println = lift . putStrLn
 
 reply :: WebSocketsData a => Client -> a -> ServerState ()
-reply client = lift . sendTextData (clientConn client)
+reply client message = do
+    lift $ try $ sendTextData (clientConn client) message
+        :: ServerState (Either ConnectionException ())
+    return ()
 
 replyError :: Client -> String -> ServerState ()
 replyError client error =
@@ -101,7 +104,10 @@ replyError client error =
     )
 
 disconnect :: Client -> ServerState ()
-disconnect client = lift $ sendClose (clientConn client) Data.Text.empty
+disconnect client = do
+    lift $ try $ sendClose (clientConn client) Data.Text.empty
+        :: ServerState (Either ConnectionException ())
+    return ()
 
 data Event
   = Connect Client
@@ -218,8 +224,7 @@ handleEvent event = do
          in reply client (encode (SkatStateForPlayer player skatState namemap _clientsResign))
     )
 
--- TODO(pinguly+simon): handle client disconnect(gemacht??) & bessere monade für client lookups
--- TODO(pinguly) token zurückgeben bei disconnect
+-- TODO(pinguly+simon): bessere monade für client lookups
 main = do
   eventQ <- newChan :: IO (Chan Event)
   availIds <- newMVar [1 .. 3] :: IO (MVar [ClientId])
