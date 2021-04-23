@@ -4,7 +4,7 @@ import { ICard } from "./State";
 
 
 const ratio = 84.9667 / 122.567   // ratio cardWidth/cardHeight (including colored border)
-const width = 6;                  // with of the arc (unit: card widths)
+const overlap = 0.5;              // between 0 and 1, smaller = larger overlap
 const theta = 27 * Math.PI / 180; // inner angle of the arc (unit: rad)
 
 const cosT = Math.cos(theta);
@@ -12,7 +12,7 @@ const sinT = Math.sin(theta);
 
 // magic math follows
 
-function f(t: number, a: number, b: number) {
+function f(t: number, b: number) {
 
     // reparametrization
 
@@ -38,12 +38,12 @@ function f(t: number, a: number, b: number) {
     // actual function: H = s * pi, 0 < s < 1
 
     let fr = 2 * cosT * sinH + 2;
-    let fx = (a + b) * (cosT * sinH + 1) + (a - b) * cosH;
-    let fy = (b - a) * sinH * sinT;
+    let fx = b * (cosT * sinH + 1) - b * cosH;
+    let fy = b * sinH * sinT;
 
     let dfr = 2 * cosT * cosH;
-    let dfx = (a + b) * (cosT * cosH) - (a - b) * sinH;
-    let dfy = (b - a) * cosH * sinT;
+    let dfx = b * (cosT * cosH) + b * sinH;
+    let dfy = b * cosH * sinT;
 
     let xx = (dfx * fr - fx * dfr) / fr / fr;
     let yy = (dfy * fr - fy * dfr) / fr / fr;
@@ -57,12 +57,13 @@ export const Hand: React.FC<{ cards: ICard[], onClickCard: (card: ICard) => void
     return <div style={{ display: 'flex', fontSize: '.8em' }}>
         {
             cards.map((card, index) => {
+                let width = cards.length * overlap;
                 let a = (cards.length - 1 - width) / 2; // leftmost x position of arc
                 let b = (cards.length - 1 + width) / 2; // rightmost x position of arc
 
-                let t = index / (cards.length - 1); // position on arc between 0 and 1
+                let t = (index + 0.5) / cards.length; // position on arc between 0 and 1
 
-                let [x, y, r] = f(t, 0, b - a);
+                let [x, y, r] = f(t, b - a);
                 x += a
 
                 return <span key={index} style={{
