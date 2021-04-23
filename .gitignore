@@ -3,3 +3,4 @@ skat
 *.o
 main
 tests
+dist-newstyle

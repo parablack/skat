@@ -22,7 +22,7 @@ instance ToJSON GameMode where
 
 
 instance ToJSON Player where
-    toJSON Player{playerPosition = pos, playerCards = cards, wonCards = won} = object ["position" .= pos, "cards" .= cards, "woncards" .= won]
+    toJSON Player{playerPosition = pos, playerCards = cards, wonCards = won} = object ["position" .= pos, "cards" .= sort cards, "woncards" .= won]
 
 instance ToJSON SkatState where
     toJSON state@ReizPhase{players=players} = object ["phase" .= pack "reiz", "players" .= players]

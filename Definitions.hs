@@ -43,7 +43,10 @@ instance (Ord Name) where
 
 
 data Card = Card Name Suit
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Show)
+
+instance (Ord Card) where
+    (<=) = extendCardPartialOrder simpleCardLE
 
 suits = [Clubs, Diamonds, Hearts, Spades]
 names = [Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
@@ -138,3 +141,8 @@ simpleCardLE (Card kind suit) (Card kind' suit')
     | suit == suit' = kind <= kind'
     | otherwise     = False
 
+extendCardPartialOrder :: (Card -> Card -> Bool) -> Card -> Card -> Bool
+extendCardPartialOrder cmp c@(Card name suit) c'@(Card name' suit')
+        | cmp c c' = True
+        | cmp c' c = False
+        | otherwise         = suit <= suit'
