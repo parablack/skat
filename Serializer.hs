@@ -27,7 +27,7 @@ instance ToJSON Player where
 instance ToJSON SkatState where
     toJSON state@ReizPhase{players=players} = object [
         "phase" .= pack "reiz",
-        "players" .= players,
+        "players" .= players
         ]
     toJSON state@RunningPhase{} =
         object [
@@ -40,8 +40,8 @@ instance ToJSON SkatState where
 
 -- personalizedSkatState :: SkatState -> PlayerPosition -> [Data.Aeson.Types.Internal.Pair]
 personalizedSkatState state@ReizPhase{} player = [
-                "phase" .= pack "reiz",
-                "ansager"
+                "phase" .= pack "reiz"
+                -- "ansager"
             ]
 personalizedSkatState state@RunningPhase{} player = [
                 "phase" .= pack "running",
