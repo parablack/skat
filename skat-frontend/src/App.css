@@ -36,3 +36,16 @@
     transform: rotate(360deg);
   }
 }
+
+.nameList {
+  position: absolute;
+  top: 10px;
+  right: 7%;
+  color: lightgreen;
+}
+.resign {
+  position: absolute;
+  top: 10px;
+  left: 0%;
+  color: orangered;
+}

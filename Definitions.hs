@@ -114,9 +114,14 @@ data SkatState =
     }
     deriving (Eq, Show)
 
-data SkatStateForPlayer = SkatStateForPlayer PlayerPosition SkatState (Map String String)
+data SkatStateForPlayer = SkatStateForPlayer {
+    position :: PlayerPosition,
+    playerSkatState :: SkatState,
+    playerNames :: Map String String,
+    resigningPlayers :: Int
+}
 
-data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | DiscardSkat Card Card deriving (Show, Eq)
+data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | Resign | DiscardSkat Card Card deriving (Show, Eq)
 
 -- For Ramsch, grand
 simpleCompatible :: Card -> Card -> Bool

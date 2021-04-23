@@ -29,6 +29,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
 
   let resolveNickname = (pos:string) => state.names[pos] || pos
 
+
   useEffect(() => {
 
     ws.onmessage = e => {
@@ -74,6 +75,26 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
           <br />
           <small>Heute spielen Sie: {sieSpielen}</small>
         </header>
+        <div className="nameList">
+        Ihre Mitspieler:
+        <ul>
+          { Object.entries(state.names).map(([pos, val]) =>
+          <li key={pos.toString()}>{pos}: {val}</li>)}
+        </ul>
+        </div>
+        <div className="resign">
+        Nächste Runde ({state.resign} / {Object.entries(state.names).length})
+        <br />
+        <button onClick={(_) => {
+      ws.send(JSON.stringify({
+        action: "resign",
+      }))
+    }}>
+        Aufgeben
+        </button>
+        </div>
+
+
 
         <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />
         <p>

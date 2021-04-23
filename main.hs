@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Data.List
 import Data.Map
+import qualified Data.Set as Set
 import Data.Text
 import Data.Text.Encoding (encodeUtf8)
 import Definitions
@@ -28,6 +29,7 @@ data Client = Client
 data ServerData = ServerData
   { clientNames :: Data.Map.Map ClientId String,
     clientRoles :: Data.Map.Map ClientId PlayerPosition,
+    clientsResign :: Set.Set ClientId,
     skatState :: SkatState,
     clients :: Data.Map.Map ClientId Client
   }
@@ -55,8 +57,16 @@ initialServer = do
     { skatState = ramschFromShuffledDeck shuffled,
       clients = Data.Map.empty,
       clientRoles = Data.Map.empty,
-      clientNames = Data.Map.empty
+      clientNames = Data.Map.empty,
+      clientsResign = Set.empty
     } :: IO ServerData
+
+newGame :: ServerData -> IO ServerData
+newGame sdata = do
+  shuffled <- shuffle deck
+  return sdata {
+    skatState = ramschFromShuffledDeck shuffled
+  }
 
 {-
 initialServer = do
@@ -149,15 +159,23 @@ maxElem = Data.List.foldr (max . Just) Nothing
 joinPositionName :: Data.Map.Map ClientId PlayerPosition -> Data.Map.Map ClientId String -> Data.Map.Map String String
 joinPositionName pos = mapKeys (show . (pos !))
 
-handlePlayerAction :: ClientId -> ReceivePacket -> ServerData -> Hopefully ServerData
+handlePlayerAction :: ClientId -> ReceivePacket -> ServerData -> Hopefully (IO ServerData)
 handlePlayerAction clientId (PlayCard card) state = do
   let player = clientRoles state ! clientId
   newState <- play (skatState state) player card
-  return state {skatState = newState}
+  return $ return (state {skatState = newState})
 handlePlayerAction clientId (SetName name) state = do
   let newNames = Data.Map.insert clientId name (clientNames state)
-  return state {clientNames = newNames}
-handlePlayerAction _ _ _ = Left "reizen not implemented"
+  return $ return (state {clientNames = newNames})
+handlePlayerAction clientId Resign state =
+  let newstate = state {
+                    clientsResign = Set.insert clientId (clientsResign state)
+                 }
+  in  if Set.size (clientsResign newstate) >= Data.Map.size (clientRoles state)  then
+
+        return $ newGame (state {clientsResign = Set.empty})
+      else return $ return newstate
+handlePlayerAction _ _ _ = Left "not implemented yet"
 
 -- TODO: PlayVariant GameMode | ShowCards | DiscardSkat Card Card
 
@@ -167,6 +185,7 @@ handleEvent event = do
     Connect client -> do
       println $ "Client " ++ show (clientId client) ++ ": connected!"
       updateClients (Data.Map.insert (clientId client) client)
+      updateClientNames (Data.Map.insert (clientId client) "Anon")
       assignedPositions <- elems . clientRoles <$> get
       let clientPos = Data.List.head $ [Geber, Vorhand, Mittelhand] Data.List.\\ assignedPositions
       updateClientRoles (Data.Map.insert (clientId client) clientPos)
@@ -183,19 +202,20 @@ handleEvent event = do
         Just action -> do
           state <- get
           case handlePlayerAction (clientId client) action state of
-            Right newState -> put newState
+            Right newState -> put =<< lift newState
             Left error -> replyError client error
   -- send out updated state
   clientList <- elems . clients <$> get
   skatState <- skatState <$> get
   _clientRoles <- clientRoles <$> get
   _clientNames <- clientNames <$> get
+  _clientsResign <- Set.size <$> (clientsResign <$> get)
   forM_
     clientList
     ( \client ->
         let player = (_clientRoles ! clientId client)
             namemap = joinPositionName _clientRoles _clientNames
-         in reply client (encode (SkatStateForPlayer player skatState namemap))
+         in reply client (encode (SkatStateForPlayer player skatState namemap _clientsResign))
     )
 
 -- TODO(pinguly+simon): handle client disconnect(gemacht??) & bessere monade für client lookups

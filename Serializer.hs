@@ -35,31 +35,37 @@ instance ToJSON SkatState where
             "turn" .= turn state
         ]
 
+-- personalizedSkatState :: SkatState -> PlayerPosition -> [Data.Aeson.Types.Internal.Pair]
+personalizedSkatState state@ReizPhase{} player = [
+                "phase" .= pack "reiz"
+            ]
+personalizedSkatState state@RunningPhase{} player = [
+                "phase" .= pack "running",
+                "gamemode" .= gameMode state,
+                "currentStich" .= Data.List.reverse (currentStich state),
+                "lastStich" .= case playedStiche state of
+                    [] -> []
+                    (x:xs) -> Data.List.reverse x,
+                "yourTurn" .=  (player == turn state),
+                "turn" .= turn state
+            ]
+personalizedSkatState state@GameFinishedState{} player = [
+                "phase" .= pack "finished",
+                "currentStich" .= lastStich state,
+                "yourTurn" .= False,
+                "scores" .= Data.Map.mapKeys show (scores state),
+                "winner" .= winner state
+            ]
+
 instance ToJSON SkatStateForPlayer where
-    toJSON (SkatStateForPlayer player state@ReizPhase{players=players} names) = object ["phase" .= pack "reiz", "you" .= playerFromPos state player, "names" .= names]
-    toJSON (SkatStateForPlayer player state@RunningPhase{} names) =
-        object [
-            "phase" .= pack "running",
-            "you" .= playerFromPos state player,
-            "gamemode" .= gameMode state,
-            "currentStich" .= Data.List.reverse (currentStich state),
-            "lastStich" .= case playedStiche state of
-                [] -> []
-                (x:xs) -> Data.List.reverse x,
-            "yourTurn" .=  (player == turn state),
-            "turn" .= turn state,
-            "names" .= names
-        ]
-    toJSON (SkatStateForPlayer player state@GameFinishedState{} names) =
-        object [
-            "phase" .= pack "finished",
-            "you" .= playerFromPos state player,
-            "currentStich" .= lastStich state,
-            "yourTurn" .= False,
-            "scores" .= Data.Map.mapKeys show (scores state),
-            "winner" .= winner state,
-            "names" .= names
-        ]
+    toJSON (SkatStateForPlayer player state names resigning) =
+        object $ [
+                "you" .= playerFromPos state player,
+                "names" .= names,
+                "resign" .= resigning
+                ] ++ additionalProperties
+        where additionalProperties = personalizedSkatState state player
+
 
 
 instance FromJSON Card where
@@ -78,6 +84,7 @@ instance FromJSON ReceivePacket where
                 "discardskat" -> DiscardSkat <$>
                                  obj .: "card1" <*>
                                  obj .: "card2"
+                "resign" -> return Resign
                 _ -> parseFail "Action unspecified."
 
     parseJSON _ = parseFail "Got no object."

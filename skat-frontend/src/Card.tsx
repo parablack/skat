@@ -38,9 +38,11 @@ export const Card: React.FC<{ card: ICard, onClick?: () => void, player?: string
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between'
-    }}>
-        <span>{geileWerteMap[name]}{geileMap[suit]}</span>
-        {onClick ? <button style={{ height: '2em', margin: '.4em' }} onClick={onClick}>nimm mich</button> : null}
+    }} onClick={onClick}>
+        <span style={{
+            textAlign: 'left'
+        }}>{geileWerteMap[name]}{geileMap[suit]}</span>
+    {/*   {onClick ? <button style={{ height: '2em', margin: '.4em' }} onClick={onClick}>nimm mich</button> : null} */}
         {player ? <div style={{ color: 'grey', fontSize: '0.5em' }}>{player}</div> : null}
     </div>
 }
