@@ -1,7 +1,3 @@
-import Control.Concurrent
-import Control.Concurrent.Chan
-import Control.Concurrent.MVar
-import Control.Exception
 import Control.Monad
 import Control.Monad.State.Lazy
 import Data.Aeson
@@ -12,29 +8,25 @@ import qualified Data.Set as Set
 import Data.Text
 import Data.Text.Encoding (encodeUtf8)
 import Definitions
-import Network.WebSockets
 import System.Random
 import Data.Array.IO
 import Serializer
+import Server
 import Skat
-
-type ClientId = Int
-
-data Client = Client
-  { clientId :: ClientId,
-    clientConn :: Connection
-  }
 
 
 data ServerData = ServerData
-  { clientNames :: Data.Map.Map ClientId String,
-    clientRoles :: Data.Map.Map ClientId PlayerPosition,
+  { clientNames   :: Data.Map.Map ClientId String,
+    clientRoles   :: Data.Map.Map ClientId PlayerPosition,
     clientsResign :: Set.Set ClientId,
-    skatState :: SkatState,
-    clients :: Data.Map.Map ClientId Client
+    skatState     :: SkatState,
+    clients       :: Data.Map.Map ClientId Client
   }
 
 type ServerState = StateT ServerData IO
+
+println :: String -> ServerState ()
+println = lift . putStrLn
 
 shuffle :: [a] -> IO [a]
 shuffle xs = do
@@ -83,15 +75,6 @@ initialServer = do
     } :: IO ServerData
 -}
 
-println :: String -> ServerState ()
-println = lift . putStrLn
-
-reply :: WebSocketsData a => Client -> a -> ServerState ()
-reply client message = do
-    lift $ try $ sendTextData (clientConn client) message
-        :: ServerState (Either ConnectionException ())
-    return ()
-
 replyError :: Client -> String -> ServerState ()
 replyError client error =
   reply
@@ -103,50 +86,7 @@ replyError client error =
         )
     )
 
-disconnect :: Client -> ServerState ()
-disconnect client = do
-    lift $ try $ sendClose (clientConn client) Data.Text.empty
-        :: ServerState (Either ConnectionException ())
-    return ()
-
-data Event
-  = Connect Client
-  | Disconnect Client ConnectionException
-  | Message Client String
-
-recvEvent :: Client -> IO Event
-recvEvent client = do
-  text <- receiveData $ clientConn client
-  return $ Message client (Data.Text.unpack text)
-
-generateEvents :: Client -> (Event -> IO ()) -> IO ()
-generateEvents client notify =
-  do
-    notify $ Connect client
-    forever (recvEvent client >>= notify)
-    `catch` (notify . Disconnect client)
-
-takeId :: MVar [ClientId] -> IO (Maybe ClientId)
-takeId ids = modifyMVar ids modify
-  where
-    modify (cid : others) = return (others, Just cid)
-    modify [] = return ([], Nothing)
-
-putId :: MVar [ClientId] -> ClientId -> IO ()
-putId ids cid = modifyMVar_ ids $ return . (cid :)
-
-acceptClient :: MVar [ClientId] -> Chan Event -> PendingConnection -> IO ()
-acceptClient availIds eventQ pending = do
-  cid <- takeId availIds
-  case cid of
-    Just num -> do
-      connection <- acceptRequest pending
-      generateEvents
-        (Client {clientId = num, clientConn = connection})
-        (writeChan eventQ)
-      putId availIds num
-    Nothing -> do
-      rejectRequestWith pending defaultRejectRequest
+-- TODO(pinguly+simon): bessere monade für client lookups
 
 updateClients :: (Data.Map.Map ClientId Client -> Data.Map.Map ClientId Client) -> ServerState ()
 updateClients modifier = modify (\state -> state {clients = modifier (clients state)})
@@ -224,16 +164,9 @@ handleEvent event = do
          in reply client (encode (SkatStateForPlayer player skatState namemap _clientsResign))
     )
 
--- TODO(pinguly+simon): bessere monade für client lookups
 main = do
-  eventQ <- newChan :: IO (Chan Event)
-  availIds <- newMVar [1 .. 3] :: IO (MVar [ClientId])
-
   putStrLn "Listening on 0.0.0.0:8080"
-
-  forkIO $ runServer "0.0.0.0" 8080 $ acceptClient availIds eventQ
-
   initialServer <- initialServer
   evalStateT
-    (forever $ (lift . readChan) eventQ >>= handleEvent)
-    initialServer
+      (runWebSockServer defaultServerConfig handleEvent)
+      initialServer
