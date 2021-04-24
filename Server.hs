@@ -1,6 +1,5 @@
 module Server (
-    ClientId,
-    Client(..),
+    Client,
     Event(..),
     ServerConfig(..),
     defaultServerConfig,
@@ -24,6 +23,15 @@ data Client = Client
   { clientId   :: ClientId,
     clientConn :: Connection
   }
+
+instance Show Client where
+  show a = "Client " ++ show (clientId a)
+
+instance Eq Client where
+  (==) a b = (clientId a) == (clientId b)
+
+instance Ord Client where
+  compare a b = compare (clientId a) (clientId b)
 
 data Event
    = Connect Client
