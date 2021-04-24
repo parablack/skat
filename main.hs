@@ -1,3 +1,5 @@
+{-# LANGUAGE ConstraintKinds, FlexibleContexts #-}
+
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.IO.Class
@@ -51,7 +53,7 @@ data ServerData = ServerData
   }
 
 type ServerState = StateT ServerData IO
-
+type MonadServerState = MonadState ServerData
 
 initialServer :: ServerData
 initialServer = ServerData
@@ -59,7 +61,7 @@ initialServer = ServerData
     dataSkatState = ramschFromShuffledDeck deck
   }
 
-newGame :: ServerState ()
+newGame :: (MonadServerState m, MonadIO m) => m ()
 newGame = do
   shuffled <- shuffle deck
   modify (\state ->
@@ -70,33 +72,33 @@ newGame = do
       modifyClient client (\record -> record {dataResigned = False})
     )
 
-replyError :: Client -> String -> ServerState ()
+replyError :: MonadIO m => Client -> String -> m ()
 replyError client err =
   reply client . encode . object $ [ pack "error" .= err ]
 
 
 -- TODO(pinguly+simon): bessere monade für client lookups
 
-modifyClientsMap :: (Map.Map Client ClientData -> Map.Map Client ClientData) -> ServerState ()
+modifyClientsMap :: MonadServerState m => (Map.Map Client ClientData -> Map.Map Client ClientData) -> m ()
 modifyClientsMap modifier =
   modify (\state -> state {dataClients = modifier (dataClients state)})
 
-getClients :: ServerState [Client]
+getClients :: MonadServerState m => m [Client]
 getClients = keys . dataClients <$> get
 
-getClientRecords :: ServerState [ClientData]
+getClientRecords :: MonadServerState m => m [ClientData]
 getClientRecords = elems . dataClients <$> get
 
-lookupClient :: Client -> MaybeT ServerState ClientData
+lookupClient :: MonadServerState m => Client -> MaybeT m ClientData
 lookupClient client = MaybeT (Map.lookup client . dataClients <$> get)
 
-addClient :: Client -> ClientData -> ServerState ()
+addClient :: MonadServerState m => Client -> ClientData -> m ()
 addClient client = modifyClientsMap . Map.insert client
 
-removeClient :: Client -> ServerState ()
+removeClient :: MonadServerState m => Client -> m ()
 removeClient = modifyClientsMap . Map.delete
 
-modifyClient :: Client -> (ClientData -> ClientData) -> ServerState ()
+modifyClient :: MonadServerState m => Client -> (ClientData -> ClientData) -> m ()
 modifyClient client modifier =
   modifyClientsMap (\clientsMap ->
       case Map.lookup client clientsMap of
@@ -106,26 +108,26 @@ modifyClient client modifier =
 
 -- play :: SkatState -> PlayerPosition -> Card -> Hopefully SkatState
 
-joinPositionName :: ServerState (Map.Map String String)
+joinPositionName :: MonadServerState m => m (Map.Map String String)
 joinPositionName = Map.fromList . List.map format <$> getClientRecords
   where format entry = (show (dataRole entry), dataName entry)
 
-countResigned :: ServerState Int
+countResigned :: MonadServerState m => m Int
 countResigned =
   List.length . List.filter id . List.map dataResigned <$> getClientRecords
 
 
-handlePlayerAction :: Client -> ReceivePacket -> ExceptT String ServerState ()
+handlePlayerAction :: (MonadIO m, MonadServerState m) => Client -> ReceivePacket -> ExceptT String m ()
 handlePlayerAction client (PlayCard card) = do
   record <- maybeToExceptT "Not connected!" $ lookupClient client
   skatState <- dataSkatState <$> get
-  newState <- ExceptT . return $ play skatState (dataRole record) card
-  lift $ modify (\state -> state {dataSkatState = newState})
+  newState <- liftEither $ play skatState (dataRole record) card
+  modify (\state -> state {dataSkatState = newState})
 
 handlePlayerAction client (SetName name) =
-  lift $ modifyClient client (\record -> record {dataName = name})
+  modifyClient client (\record -> record {dataName = name})
 
-handlePlayerAction client Resign = lift $ do
+handlePlayerAction client Resign = do
     modifyClient client (\record -> record {dataResigned = True})
     numResigned <- countResigned
     numPlayer <- List.length <$> getClients
