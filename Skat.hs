@@ -1,7 +1,7 @@
 module Skat(play, gameModeFromString, playerFromPos,mRamsch, ramschFromShuffledDeck, playersFromDeck) where
 -- TODO mRamsch is unnec
 
-import Control.Exception
+import Control.Monad.Except
 import Data.List
 import qualified Data.Map
 import Definitions
@@ -57,7 +57,7 @@ reizen state@ReizPhase{reizStateMachine=machine} player val = do
                     reizAnsagerTurn = False
                 } -- TODO hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
                 MittelhandGeber -> state -- TODO Geber spielt
-reizen state Vorhand Weg = Left "pattern in Reizen does not match"
+reizen state Vorhand Weg = throwError "pattern in Reizen does not match"
 
 -- Bool: ja / nein?
 -- reizenAntwort :: SkatState -> PlayerPosition -> Bool -> SkatState
@@ -81,8 +81,8 @@ gamemodeAllowsCard _ _ _ = False
 
 
 myAssert :: Bool -> String -> Hopefully ()
-myAssert True _ = Right ()
-myAssert False s = Left s
+myAssert True _ = return ()
+myAssert False s = throwError s
 
 determineWinner :: Stich -> (Card -> Card -> Bool) -> PlayerPosition
 determineWinner stich le
@@ -188,4 +188,3 @@ debugRamschState = ramschFromShuffledDeck deck
 --     highestBid = 0,
 --     currentWinner = Nothing
 -- }
-

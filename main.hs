@@ -4,11 +4,10 @@ import Control.Monad.IO.Class
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Maybe
 import Data.Aeson
-import qualified Data.ByteString.Lazy as B
-import Data.List
-import Data.Map
+import Data.List as List
+import Data.Map  as Map
 import Data.Text
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Encoding
 import Definitions
 import System.Random
 import Data.Array.IO
@@ -22,7 +21,7 @@ println :: MonadIO m => String -> m ()
 println = liftIO . putStrLn
 
 maxElem :: Ord a => [a] -> Maybe a
-maxElem = Data.List.foldr (max . Just) Nothing
+maxElem = List.foldr (max . Just) Nothing
 
 shuffle :: MonadIO m => [a] -> m [a]
 shuffle xs = liftIO $ do
@@ -34,7 +33,7 @@ shuffle xs = liftIO $ do
             writeArray ar j vi
             return vj
   where
-    n = Data.List.length xs
+    n = List.length xs
     newArray :: Int -> [a] -> IO (IOArray Int a)
     newArray n xs =  newListArray (1, n) xs
 
@@ -47,30 +46,16 @@ data ClientData = ClientData
   }
 
 data ServerData = ServerData
-  { dataClients   :: Map Client ClientData,
+  { dataClients   :: Map.Map Client ClientData,
     dataSkatState :: SkatState
   }
 
 type ServerState = StateT ServerData IO
 
-{-
-initialServer = do
-  return ServerData
-    { skatState = GameFinishedState {
-      players = playersFromDeck deck,
-      lastStich = [],
-      scores = Data.Map.insert Vorhand 1000 $ Data.Map.singleton Geber 100,
-      winner = Geber
-    },
-      clients = Data.Map.empty,
-      clientRoles = Data.Map.empty,
-      clientNames = Data.Map.empty
-    } :: IO ServerData
--}
 
 initialServer :: ServerData
 initialServer = ServerData
-  { dataClients = Data.Map.empty,
+  { dataClients = Map.empty,
     dataSkatState = ramschFromShuffledDeck deck
   }
 
@@ -80,57 +65,61 @@ newGame = do
   modify (\state ->
         state {dataSkatState = ramschFromShuffledDeck shuffled}
     )
-  clients <- keys . dataClients <$> get
+  clients <- getClients
   forM_ clients (\client ->
       modifyClient client (\record -> record {dataResigned = False})
     )
 
 replyError :: Client -> String -> ServerState ()
 replyError client err =
-  reply client . encode . object $ [ Data.Text.pack "error" .= err ]
+  reply client . encode . object $ [ pack "error" .= err ]
 
 
 -- TODO(pinguly+simon): bessere monade für client lookups
 
-modifyClients :: (Map Client ClientData -> Map Client ClientData) -> ServerState ()
-modifyClients modifier =
+modifyClientsMap :: (Map.Map Client ClientData -> Map.Map Client ClientData) -> ServerState ()
+modifyClientsMap modifier =
   modify (\state -> state {dataClients = modifier (dataClients state)})
 
+getClients :: ServerState [Client]
+getClients = keys . dataClients <$> get
+
+getClientRecords :: ServerState [ClientData]
+getClientRecords = elems . dataClients <$> get
+
 lookupClient :: Client -> MaybeT ServerState ClientData
-lookupClient client = MaybeT (Data.Map.lookup client . dataClients <$> get)
+lookupClient client = MaybeT (Map.lookup client . dataClients <$> get)
 
 addClient :: Client -> ClientData -> ServerState ()
-addClient client = modifyClients . Data.Map.insert client
+addClient client = modifyClientsMap . Map.insert client
 
 removeClient :: Client -> ServerState ()
-removeClient = modifyClients . Data.Map.delete
+removeClient = modifyClientsMap . Map.delete
 
 modifyClient :: Client -> (ClientData -> ClientData) -> ServerState ()
 modifyClient client modifier =
-  modifyClients (\clients ->
-      case Data.Map.lookup client clients of
-          Just record -> Data.Map.insert client (modifier record) clients
-          Nothing     -> clients
+  modifyClientsMap (\clientsMap ->
+      case Map.lookup client clientsMap of
+          Just record -> Map.insert client (modifier record) clientsMap
+          Nothing     -> clientsMap
     )
 
 -- play :: SkatState -> PlayerPosition -> Card -> Hopefully SkatState
 
-joinPositionName :: ServerState (Data.Map.Map String String)
-joinPositionName =
-  Data.Map.fromList . Data.List.map format . elems . dataClients <$> get
-  where
-    format entry = (show (dataRole entry), dataName entry)
+joinPositionName :: ServerState (Map.Map String String)
+joinPositionName = Map.fromList . List.map format <$> getClientRecords
+  where format entry = (show (dataRole entry), dataName entry)
 
 countResigned :: ServerState Int
 countResigned =
-  Data.List.length . Data.List.filter id . Data.List.map dataResigned . elems . dataClients <$> get
+  List.length . List.filter id . List.map dataResigned <$> getClientRecords
 
 
 handlePlayerAction :: Client -> ReceivePacket -> ExceptT String ServerState ()
 handlePlayerAction client (PlayCard card) = do
   record <- maybeToExceptT "Not connected!" $ lookupClient client
   skatState <- dataSkatState <$> get
-  newState <- liftEither $ play skatState (dataRole record) card
+  newState <- ExceptT . return $ play skatState (dataRole record) card
   lift $ modify (\state -> state {dataSkatState = newState})
 
 handlePlayerAction client (SetName name) =
@@ -139,7 +128,7 @@ handlePlayerAction client (SetName name) =
 handlePlayerAction client Resign = lift $ do
     modifyClient client (\record -> record {dataResigned = True})
     numResigned <- countResigned
-    numPlayer <- Data.List.length . elems . dataClients <$> get
+    numPlayer <- List.length <$> getClients
     if numResigned >= numPlayer
         then newGame
         else return ()
@@ -150,7 +139,7 @@ handlePlayerAction _ _ = throwError "Not implemented yet!"
 
 broadcastState :: ServerState ()
 broadcastState = do
-  clients <- Data.Map.assocs . dataClients <$> get
+  clients <- Map.assocs . dataClients <$> get
   skatState <- dataSkatState <$> get
   numResigned <- countResigned
   forM_ clients ( \(client, record) -> do
@@ -162,8 +151,8 @@ broadcastState = do
 handleEvent :: Event -> ServerState ()
 handleEvent (Connect client) = do
   println $ (show client) ++ ": connected!"
-  assignedPositions <- Data.List.map dataRole . elems . dataClients <$> get
-  let clientPos = Data.List.head $ [Geber, Vorhand, Mittelhand] Data.List.\\ assignedPositions
+  assignedPositions <- List.map dataRole <$> getClientRecords
+  let clientPos = List.head $ [Geber, Vorhand, Mittelhand] List.\\ assignedPositions
   addClient client ClientData {
       dataName     = "Anon",
       dataRole     = clientPos,
@@ -175,12 +164,10 @@ handleEvent (Disconnect client cause) = do
   println $ (show client) ++ " " ++ show cause ++ ": disconnected!"
   removeClient client
 
-handleEvent (Message client s) = do
-  -- TODO(bennofs): fix
-  let message = B.fromStrict (Data.Text.Encoding.encodeUtf8 (Data.Text.pack s))
-  let maybeAction = MaybeT . return . decode $ message
+handleEvent (Message client message) = do
+  let maybeTAction = MaybeT . return . decodeStrict . encodeUtf8 . pack $ message
   result <- runExceptT $ do
-      action <- maybeToExceptT "couldn't deserialize action" maybeAction
+      action <- maybeToExceptT "couldn't deserialize action" maybeTAction
       handlePlayerAction client action
   case result of
       Left err -> replyError client err
