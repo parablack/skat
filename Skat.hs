@@ -54,20 +54,20 @@ reizen state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player va
             Weg -> True
             Reizwert wert -> wert > (reizCurrentBid state)
     myAssert (reizHighEnough) "Dein Gebot war zu billig! Gib dir mehr Mühe!"
-    let state = state {reizAnsagerTurn = False}
+    let state2 = state {reizAnsagerTurn = False}
     case val of
         Reizwert x ->
             if machine == VorhandNix then
-                return $ skatPickingFromReiz state Vorhand
-            else return state{reizCurrentBid = x}
+                return $ skatPickingFromReiz state2 Vorhand
+            else return $ state2{reizCurrentBid = x}
         Weg        ->
             return $ case machine of
-                VorhandNix -> ramschFromReiz state
-                MittelhandVorhand -> state { reizStateMachine = GeberVorhand }
-                GeberVorhand -> if reizCurrentBid state == 0 then
-                                    state { reizStateMachine = VorhandNix }
-                                else skatPickingFromReiz state Vorhand -- hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
-                MittelhandGeber -> skatPickingFromReiz state Geber
+                VorhandNix -> ramschFromReiz state2
+                MittelhandVorhand -> state2 { reizStateMachine = GeberVorhand }
+                GeberVorhand -> if reizCurrentBid state2 == 0 then
+                                    state2 { reizStateMachine = VorhandNix }
+                                else skatPickingFromReiz state2 Vorhand -- hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
+                MittelhandGeber -> skatPickingFromReiz state2 Geber
 reizen state Vorhand Weg = throwError "pattern in Reizen does not match"
 
 -- Bool: ja / nein?

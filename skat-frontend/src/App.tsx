@@ -43,7 +43,7 @@ const ReizInput: React.FC<{ws: WebSocket, state: IReizState}> = ({ws, state}) =>
                 <input ref={textInput} style={{textAlign: "center" }} type="number" min={state.reizCurrentBid} max="100" size={5} defaultValue={20}/>
                 <button onClick = {() => {
                     ws.send(JSON.stringify({
-                      action: "reizbid", bid: textInput!.current!.value,
+                      action: "reizbid", reizbid: parseInt(textInput!.current!.value),
                     }))
                 }}>bieten</button>
                     oder
