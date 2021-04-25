@@ -8,9 +8,9 @@ import { Scoreboard } from './Scoreboard';
 
 
 const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
-  return <div style={{ fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin' }}>
+  return <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin' }}>
     {cards.length ? (
-      <span style={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', justifyContent: 'center' }}>
+      <span style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
         {cards.map(([card, name], index) => {
           return <span style={{}} key={index}>
             <Card card={card} player={name}></Card>
@@ -59,63 +59,31 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   }
 
   return (
-    <div className="App">
+    <div className="App" style={{
+        height: "100%",
+    }}>
       <section style={{
         backgroundColor: '#282c34',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'space-evenly',
         fontSize: 'calc(10px + 2vmin)',
         color: 'white',
-        height: '100vh',
+        height: '100%'
       }}>
-        <header>
-          Wilkommen auf der Ramschinsel!
-          <br />
-          <small>Heute spielen Sie: {sieSpielen}</small>
-        </header>
-        <div className="nameList">
-        Ihre Mitspieler:
-        <ul>
-          { Object.entries(state.names).map(([pos, val]) =>
-          <li key={pos.toString()}>{pos}: {val}</li>)}
-        </ul>
-        </div>
-        <div className="resign">
-        Nächste Runde ({state.resign} / {Object.entries(state.names).length})
-        <br />
-        <button onClick={(_) => {
-      ws.send(JSON.stringify({
-        action: "resign",
-      }))
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-evenly',
+        alignItems: 'center',
+        height: '100%'
     }}>
-        Aufgeben
-        </button>
-        </div>
-
-
 
         <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />
-        <p>
-          {whoIsDran}
-          <br />
-          <small>
-            {resolveNickname(state.you.position)} <button onClick={(_) => {
-              let name = prompt("Enter your name")
-              if(name) {
-                ws.send(JSON.stringify({
-                  action: "setname",
-                  name,
-                }))
-                localStorage.setItem("nickname", name)
-              }
-            }}>Change Name</button>
-          </small>
-        </p>
-
         { state.phase === "finished" ? <Scoreboard state={state} /> : ""}
-        <span style={{ margin: '4em' }}>
+        <span style={{ margin: '.4em' }}>
           <Hand cards={state.you.cards} onClickCard={card => {
             console.log("clicked card", card)
             ws.send(JSON.stringify({
@@ -125,6 +93,57 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
           }} />
 
         </span>
+
+      </div>
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-evenly',
+        alignItems: 'center',
+        height: '100%'
+    }}>
+    <header>
+      Wilkommen auf der Ramschinsel!
+      <br />
+      <small>Heute spielen Sie: {sieSpielen}</small>
+    </header>
+
+    <div className="nameList">
+    Ihre Mitspieler:
+    <ul>
+      { Object.entries(state.names).map(([pos, val]) =>
+      <li key={pos.toString()}>{pos}: {val}</li>)}
+    </ul>
+    </div>
+
+    <p>
+      {whoIsDran}
+      <br />
+      <small>
+        {resolveNickname(state.you.position)} <button onClick={(_) => {
+          let name = prompt("Enter your name")
+          if(name) {
+            ws.send(JSON.stringify({
+              action: "setname",
+              name,
+            }))
+            localStorage.setItem("nickname", name)
+          }
+        }}>Change Name</button>
+      </small>
+    </p>
+
+    <div className="resign">
+    Nächste Runde ({state.resign} / {Object.entries(state.names).length})
+    <br />
+    <button onClick={(_) => {ws.send(JSON.stringify({action: "resign", }))}}>
+    Aufgeben
+    </button>
+    </div>
+
+      </div>
+
       </section>
     </div>
   );

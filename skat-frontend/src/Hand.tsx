@@ -54,7 +54,7 @@ function f(t: number, b: number) {
 
 
 export const Hand: React.FC<{ cards: ICard[], onClickCard: (card: ICard) => void }> = ({ cards, onClickCard }) => {
-    return <div style={{ display: 'flex', fontSize: '.8em' }}>
+    return <div style={{ display: 'flex', justifyContent: 'center', fontSize: '.8em', maxWidth: (overlap * 10 * 7)+"rem" }}>
         {
             cards.map((card, index) => {
                 let width = cards.length * overlap;
@@ -65,6 +65,8 @@ export const Hand: React.FC<{ cards: ICard[], onClickCard: (card: ICard) => void
 
                 let [x, y, r] = f(t, b - a);
                 x += a
+                y -= f(0.5, b - a)[1] / 2;
+
 
                 return <span key={index} style={{
                     transform: `translate(${(x - index) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad)`,
