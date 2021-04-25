@@ -3,7 +3,7 @@ import './App.css';
 import React, { useEffect, useState } from 'react';
 import { DEBUG_STATE, ICard, IReizState, Stich } from './State';
 import { Card } from './Card';
-import { Hand } from './Hand';
+import { YourHand, OpponentHands } from './Hand';
 import { Scoreboard } from './Scoreboard';
 
 
@@ -40,13 +40,21 @@ const ReizInput: React.FC<{ws: WebSocket, state: IReizState}> = ({ws, state}) =>
             <div>
                 Du darfst
                 <br/>
-                <input ref={textInput} style={{textAlign: "center" }} type="number" min={state.reizCurrentBid} max="100" size={5} defaultValue={20}/>
+                <input ref={textInput}
+                       style={{textAlign: "center" }}
+                       type="number"
+                       min={state.reizCurrentBid}
+                       max="100"
+                       size={5}
+                       defaultValue={state.reizCurrentBid+1}
+                />
                 <button onClick = {() => {
                     ws.send(JSON.stringify({
-                      action: "reizbid", reizbid: parseInt(textInput!.current!.value),
+                        action: "reizbid",
+                        reizbid: parseInt(textInput!.current!.value),
                     }))
                 }}>bieten</button>
-                    oder
+                oder
                 <button onClick = {() => {
                     ws.send(JSON.stringify({
                       action: "reizweg",
@@ -137,17 +145,21 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
         height: '100%'
     }}>
 
+        <span style={{ margin: '.4em' }}>
+            <OpponentHands left={state.you.cards} right={state.you.cards} />
+        </span>
+
         <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />
         { state.phase === "finished" ? <Scoreboard state={state} /> : ""}
+
         <span style={{ margin: '.4em' }}>
-          <Hand cards={state.you.cards} onClickCard={card => {
+          <YourHand cards={state.you.cards} onClickCard={card => {
             console.log("clicked card", card)
             ws.send(JSON.stringify({
               action: "playcard",
               card,
             }))
-          }} />
-
+        }} />
         </span>
 
       </div>
