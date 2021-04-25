@@ -40,9 +40,22 @@ instance ToJSON SkatState where
 
 -- personalizedSkatState :: SkatState -> PlayerPosition -> [Data.Aeson.Types.Internal.Pair]
 personalizedSkatState state@ReizPhase{} player = [
-                "phase" .= pack "reiz"
-                -- "ansager"
+                "phase" .= pack "reiz",
+                "yourTurn" .= (reizTurn state == Just player),
+                "turn" .= (case reizTurn state of
+                    Nothing -> error "Unreachable state: Nobody's turn"
+                    Just x -> x),
+                "reizAnsagerTurn" .= reizAnsagerTurn state,
+                "reizCurrentBid" .= reizCurrentBid state
             ]
+personalizedSkatState state@SkatPickingPhase{} player = [
+                "phase" .= pack "skatpicking",
+                "yourTurn" .= (singlePlayer state == Just player),
+                "turn" .= (case singlePlayer state of
+                    Nothing -> error "Unreachable state: Nobody's turn (no single player in skat picking)"
+                    Just x -> x)
+            ]
+
 personalizedSkatState state@RunningPhase{} player = [
                 "phase" .= pack "running",
                 "gamemode" .= gameMode state,
@@ -89,6 +102,10 @@ instance FromJSON ReceivePacket where
                                  obj .: "card1" <*>
                                  obj .: "card2"
                 "resign" -> return Resign
+                "reizbid" -> do
+                    bid <- (obj .: "reizbid" :: Parser Int)
+                    return $ ReizBid (if bid == 0 then Weg else Reizwert bid)
+                "reizanswer" -> ReizAnswer <$> (obj .: "value" :: Parser Bool)
                 _ -> parseFail "Action unspecified."
 
     parseJSON _ = parseFail "Got no object."

@@ -58,14 +58,14 @@ type MonadServerState = MonadState ServerData
 initialServer :: ServerData
 initialServer = ServerData
   { dataClients = Map.empty,
-    dataSkatState = ramschFromShuffledDeck deck
+    dataSkatState = initialStateFromDeck deck
   }
 
 newGame :: (MonadServerState m, MonadIO m) => m ()
 newGame = do
   shuffled <- shuffle deck
   modify (\state ->
-        state {dataSkatState = ramschFromShuffledDeck shuffled}
+        state {dataSkatState = initialStateFromDeck shuffled}
     )
   clients <- getClients
   forM_ clients (\client ->
@@ -128,12 +128,23 @@ handlePlayerAction client (SetName name) =
   modifyClient client (\record -> record {dataName = name})
 
 handlePlayerAction client Resign = do
-    modifyClient client (\record -> record {dataResigned = True})
-    numResigned <- countResigned
-    numPlayer <- List.length <$> getClients
-    if numResigned >= numPlayer
-        then newGame
-        else return ()
+  modifyClient client (\record -> record {dataResigned = True})
+  numResigned <- countResigned
+  numPlayer <- List.length <$> getClients
+  when (numResigned >= numPlayer) newGame
+
+handlePlayerAction client (ReizBid val) = do
+  record <- maybeToExceptT "Not connected!" $ lookupClient client
+  skatState <- dataSkatState <$> get
+  newState <- liftEither $ reizen skatState (dataRole record) val
+  modify (\state -> state {dataSkatState = newState})
+
+handlePlayerAction client (ReizAnswer val) = do
+  record <- maybeToExceptT "Not connected!" $ lookupClient client
+  skatState <- dataSkatState <$> get
+  newState <- liftEither $ reizenAntwort skatState (dataRole record) val
+  modify (\state -> state {dataSkatState = newState})
+
 
 handlePlayerAction _ _ = throwError "Not implemented yet!"
 
