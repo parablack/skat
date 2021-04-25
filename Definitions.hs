@@ -6,7 +6,7 @@ module Definitions(Suit(..), Name(..), Card(..), Player(..),
      Stich(..), Reizwert(..), GameMode(..), Hopefully(..),
      PlayerPosition(..), SkatState(..), SkatStateForPlayer(..), ReceivePacket(..),
      ReizStateMachine(..),
-     deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer) where
+     deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn) where
 
 import Data.Maybe
 import Data.List
@@ -97,7 +97,7 @@ data SkatState =
     } |
     SkatPickingPhase {
         players :: [Player],
-        skat :: [Card],
+        reizCurrentBid :: Int,
         singlePlayer :: Maybe PlayerPosition
     } |
     RunningPhase {
@@ -131,8 +131,18 @@ activeReizPlayer MittelhandGeber = Mittelhand
 activeReizPlayer GeberVorhand = Geber
 activeReizPlayer VorhandNix = Vorhand
 
+passiveReizPlayer :: ReizStateMachine -> Maybe PlayerPosition
+passiveReizPlayer MittelhandVorhand = Just Vorhand
+passiveReizPlayer MittelhandGeber = Just Geber
+passiveReizPlayer GeberVorhand = Just Vorhand
+passiveReizPlayer VorhandNix = Nothing
 
-data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | Resign | DiscardSkat Card Card deriving (Show, Eq)
+reizTurn :: SkatState -> Maybe PlayerPosition
+reizTurn ReizPhase{reizAnsagerTurn=False, reizStateMachine=machine} = passiveReizPlayer machine
+reizTurn ReizPhase{reizAnsagerTurn=True, reizStateMachine=machine} = return $ activeReizPlayer machine
+
+
+data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | Resign | DiscardSkat Card Card | ReizBid Reizwert | ReizAnswer Bool deriving (Show, Eq)
 
 -- For Ramsch, grand
 simpleCompatible :: Card -> Card -> Bool
