@@ -53,7 +53,13 @@ personalizedSkatState state@SkatPickingPhase{} player = [
                 "yourTurn" .= (singlePlayer state == Just player),
                 "turn" .= (case singlePlayer state of
                     Nothing -> error "Unreachable state: Nobody's turn (no single player in skat picking)"
-                    Just x -> x)
+                    Just x -> x),
+                "cardsToDiscard" .=
+                    (case singlePlayer state of
+                    Nothing -> error "Unreachable state: Nobody's turn (no single player in skat picking)"
+                    Just x -> (Data.List.length . playerCards) (playerFromPos state player) - 10
+                    )
+
             ]
 
 personalizedSkatState state@RunningPhase{} player = [

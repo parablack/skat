@@ -8,8 +8,7 @@ import { Scoreboard } from './Scoreboard';
 
 
 const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
-  return <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin' }}>
-    {cards.length ? (
+  return <div> {cards.length ? (
       <span style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
         {cards.map(([card, name], index) => {
           return <span style={{}} key={index}>
@@ -19,8 +18,7 @@ const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
       </span>
     ) : (
       <img src={logo} className="App-logo" alt="logo" />
-    )}
-  </div>
+    )} </div>
 }
 
 const ReizInput: React.FC<{ws: WebSocket, state: IReizState}> = ({ws, state}) => {
@@ -29,7 +27,13 @@ const ReizInput: React.FC<{ws: WebSocket, state: IReizState}> = ({ws, state}) =>
 
     if (!state.yourTurn) {
         return (
-            <div>
+            <div style={{
+              textAlign: 'center',
+              verticalAlign: 'center'
+            }}>
+              <br />
+              <br />
+              <br />
                 Es wurde schon {state.reizCurrentBid} geboten.
             </div>
         )
@@ -75,7 +79,7 @@ const ReizInput: React.FC<{ws: WebSocket, state: IReizState}> = ({ws, state}) =>
                 oder
                 <button onClick = {() => {
                     ws.send(JSON.stringify({
-                      action: "reizweg", value: false
+                      action: "reizanswer", value: false
                     }))
                 }}>Nein</button>
             </div>
@@ -106,18 +110,14 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   }, [ws])
 
   let displayStich:Stich = [];
-  let whoIsDran = "Das hier darfst du nicht sehen!";
   let sieSpielen = "Noch nix"
 
   if (state.phase === "reizen") {
-      whoIsDran = state.yourTurn ? `Aluurm! Du bist dran!` : resolveNickname(state.turn) + " ist dran."
       sieSpielen = "Gleich Skat ..."
   } else if (state.phase === "running") {
-    whoIsDran = state.yourTurn ? `Aluurm! Du bist dran!` : resolveNickname(state.turn) + " ist dran."
     displayStich = state.currentStich.length === 0 ? state.lastStich : state.currentStich;
     sieSpielen = state.gamemode
   } else if (state.phase === "finished") {
-    whoIsDran = resolveNickname(state.winner) + " hat gewonnen!"
     displayStich = state.currentStich
     sieSpielen = "Nix mehr, das Spiel ist nämlich vorbei!"
   }
@@ -146,20 +146,33 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     }}>
 
         <span style={{ margin: '.4em' }}>
-            <OpponentHands left={state.you.cards} right={state.you.cards} />
+            <OpponentHands state={state} />
         </span>
 
-        <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />
+        <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin' }}>
+      { state.phase === "reizen" ?
+          (<ReizInput ws={ws} state={state} />)
+          :
+          (<TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />)
+      }
+      </div>
+
         { state.phase === "finished" ? <Scoreboard state={state} /> : ""}
 
         <span style={{ margin: '.4em' }}>
-          <YourHand cards={state.you.cards} onClickCard={card => {
+          <YourHand state={state} onClickCard={card => {
             console.log("clicked card", card)
             ws.send(JSON.stringify({
               action: "playcard",
               card,
             }))
-        }} />
+          }} onChangeName={name => {
+          ws.send(JSON.stringify({
+            action: "setname",
+            name
+          }))
+          localStorage.setItem("nickname", name)
+          }} />
         </span>
 
       </div>
@@ -177,6 +190,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
       <small>Heute spielen Sie: {sieSpielen}</small>
     </header>
 
+{ /*
     <div className="nameList">
     Ihre Mitspieler:
     <ul>
@@ -184,27 +198,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
       <li key={pos.toString()}>{pos}: {val}</li>)}
     </ul>
     </div>
-
-      <p>
-      {whoIsDran}
-      { state.phase === "reizen" ? <div><br/> <ReizInput ws={ws} state={state} /></div> : ""}
-      </p>
-
-      <p>
-        {"You are " + resolveNickname(state.you.position)}
-        <button onClick={(_) => {
-          let name = prompt("Enter your name")
-          if(name) {
-            ws.send(JSON.stringify({
-              action: "setname",
-              name,
-            }))
-            localStorage.setItem("nickname", name)
-          }
-        }}>Change Name</button>
-    </p>
-
-
+      */ }
 
     <div className="resign">
     Nächste Runde ({state.resign} / {Object.entries(state.names).length})

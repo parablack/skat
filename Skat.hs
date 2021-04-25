@@ -54,27 +54,26 @@ reizen state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player va
             Weg -> True
             Reizwert wert -> wert > (reizCurrentBid state)
     myAssert (reizHighEnough) "Dein Gebot war zu billig! Gib dir mehr Mühe!"
-    let state2 = state {reizAnsagerTurn = False}
     case val of
         Reizwert x ->
             if machine == VorhandNix then
-                return $ skatPickingFromReiz state2 Vorhand
-            else return $ state2{reizCurrentBid = x}
+                return $ skatPickingFromReiz state Vorhand
+            else return $ state {reizCurrentBid = x, reizAnsagerTurn = False}
         Weg        ->
             return $ case machine of
-                VorhandNix -> ramschFromReiz state2
-                MittelhandVorhand -> state2 { reizStateMachine = GeberVorhand }
-                GeberVorhand -> if reizCurrentBid state2 == 0 then
-                                    state2 { reizStateMachine = VorhandNix }
-                                else skatPickingFromReiz state2 Vorhand -- hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
-                MittelhandGeber -> skatPickingFromReiz state2 Geber
+                VorhandNix -> ramschFromReiz state
+                MittelhandVorhand -> state { reizStateMachine = GeberVorhand }
+                GeberVorhand -> if reizCurrentBid state == 0 then
+                                    state { reizStateMachine = VorhandNix }
+                                else skatPickingFromReiz state Vorhand -- hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
+                MittelhandGeber -> skatPickingFromReiz state Geber
 reizen state Vorhand Weg = throwError "pattern in Reizen does not match"
 
 -- Bool: ja / nein?
 reizenAntwort :: SkatState -> PlayerPosition -> Bool -> Hopefully SkatState
-reizenAntwort state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=False} player val = do
-    myAssert (reizTurn state == Just player) "Du darfst aktuell keine Reizantwort abgeben!"
-    let state = state {reizAnsagerTurn = True}
+reizenAntwort stateOrig@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=False} player val = do
+    myAssert (reizTurn stateOrig == Just player) "Du darfst aktuell keine Reizantwort abgeben!"
+    let state = stateOrig {reizAnsagerTurn = True}
     return $ case val of
         True -> state
         False -> case machine of
@@ -115,12 +114,12 @@ determineWinner stich le
           secondcard = fst $ stich !! 1
           thirdcard = fst $ head stich
 
-addWonCardsToPlayer :: [Player] -> PlayerPosition -> [Card] -> [Player]
-addWonCardsToPlayer [] _ _ = []
-addWonCardsToPlayer (x:xs) pos cards = if playerPosition x == pos then x {
+addWonCardsToPlayer :: PlayerPosition -> [Card] -> [Player] -> [Player]
+addWonCardsToPlayer _ _ [] = []
+addWonCardsToPlayer pos cards (x:xs) = if playerPosition x == pos then x {
             wonCards = cards ++ wonCards x
         } : xs
-        else x : addWonCardsToPlayer xs pos cards
+        else x : addWonCardsToPlayer pos cards xs
 
 removePlayedCard :: Card -> [Player] -> [Player]
 removePlayedCard card = map (deleteFun card)
@@ -158,7 +157,7 @@ playRawOnState oldstate@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=o
                 turn = winner,
                 currentStich = [],
                 playedStiche = stich : playedStiche newstate,
-                players = addWonCardsToPlayer (players newstate) winner stichCards
+                players = addWonCardsToPlayer winner stichCards (players newstate)
             }
     | otherwise         = newstate {
             turn = nextPos whoseTurn,
@@ -169,6 +168,19 @@ playRawOnState oldstate@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=o
                         players = removePlayedCard card $ players oldstate
                      }
 
+-- runningFromSkatPicking :: SkatState -> SkatState
+-- runningFromSkatPicking state@SkatPickingPhase = RunningPhase {
+--         players = players state,
+--         singlePlayer = singlePlayer state,
+--         gameMode :: GameMode,
+--         currentStich :: Stich,
+--         playedStiche :: [Stich],
+--         turn :: PlayerPosition
+--
+-- } where newPlayers = addSkatToPlayerCard (skat state) singlePlayer (players state)
+-- runningFromSkatPicking _ = error "runningFromSkatPicking called on non-picking state."
+
+
 play :: SkatState -> PlayerPosition -> Card -> Hopefully SkatState
 play state@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=oldStich} pos card = do
     myAssert (pos == whoseTurn) "It is not your turn!"
@@ -177,6 +189,21 @@ play state@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=oldStich} pos 
     let newstate = playRawOnState state pos card
         newstateChecked = checkGameEnd newstate
     return newstateChecked
+play state@SkatPickingPhase{singlePlayer=Just singlePlayer} pos card = do
+    myAssert (pos == singlePlayer) "Du spielst nicht alleine. Lass den Skat gefälligst in Ruhe!"
+    myAssert (playerHasCard state pos card) "You don't have this card, you h4x0r!"
+    let player = playerFromPos state singlePlayer
+    let playerAmountCards = (length . playerCards) player
+    when (playerAmountCards <= 10) $ return (error "Skat discarding but less than 11 cards left")
+    -- let newPlayers = removePlayedCard card) $ players state
+    let newState = state {
+        players = (addWonCardsToPlayer pos [card] . removePlayedCard card) $ players state
+    }
+    case playerAmountCards - 1 of
+        11 -> return newState
+        10 -> return newState -- TODO
+        _  -> error "I am in SkatPicking state, but theres no Skat to Discard."
+play _ _ _ = throwError "You are currently not allowed to play."
 
 slice start end = take (end - start + 1) . drop start
 

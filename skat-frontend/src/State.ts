@@ -41,7 +41,7 @@ export interface IReizState {
     resign: number
 }
 
-type IState = IFinishedState | IRunningState | IReizState
+export type IState = IFinishedState | IRunningState | IReizState
 
 export const DEBUG_STATE: IState =
    { "yourTurn": false, "gamemode": "Ramsch", "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }

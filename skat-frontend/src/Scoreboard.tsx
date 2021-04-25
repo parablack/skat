@@ -5,6 +5,7 @@ export const Scoreboard: React.FC<{ state: IFinishedState }> = ({ state }) => {
     let sum = Object.values(state.scores).reduce((x, y) => x + y, 0)
 
     return <div>
+        {state.names[state.winner]} hat gewonnen!
         <table>
             <tbody>
                 {
