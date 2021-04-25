@@ -30,8 +30,19 @@ export interface IFinishedState {
     scores: {[player: string]:number},
     currentStich: Stich
 }
+export interface IReizState {
+    phase: "reizen",
+    you: IPlayerState,
+    turn: string,
+    names: {[player: string]:string},
+    yourTurn: boolean,
+    reizAnsagerTurn: boolean,
+    reizCurrentBid: number,
+    resign: number
+}
 
-type IState = IFinishedState | IRunningState
+type IState = IFinishedState | IRunningState | IReizState
 
 export const DEBUG_STATE: IState =
-   { "yourTurn": false, "gamemode": "Ramsch", "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }
+   // { "yourTurn": false, "gamemode": "Ramsch", "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }
+   { "yourTurn": true, "reizAnsagerTurn": true, "reizCurrentBid": 18, "phase": "reizen", "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }

@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
-import { DEBUG_STATE, ICard, Stich } from './State';
+import { DEBUG_STATE, ICard, IReizState, Stich } from './State';
 import { Card } from './Card';
 import { Hand } from './Hand';
 import { Scoreboard } from './Scoreboard';
@@ -21,6 +21,58 @@ const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
       <img src={logo} className="App-logo" alt="logo" />
     )}
   </div>
+}
+
+const ReizInput: React.FC<{ws: WebSocket, state: IReizState}> = ({ws, state}) => {
+
+    let textInput  = React.useRef<HTMLInputElement>(null);
+
+    if (!state.yourTurn) {
+        return (
+            <div>
+                Es wurde schon {state.reizCurrentBid} geboten.
+            </div>
+        )
+    }
+
+    if (state.reizAnsagerTurn) {
+        return (
+            <div>
+                Du darfst
+                <br/>
+                <input ref={textInput} style={{textAlign: "center" }} type="number" min={state.reizCurrentBid} max="100" size={5} defaultValue={20}/>
+                <button onClick = {() => {
+                    ws.send(JSON.stringify({
+                      action: "reizbid", bid: textInput!.current!.value,
+                    }))
+                }}>bieten</button>
+                    oder
+                <button onClick = {() => {
+                    ws.send(JSON.stringify({
+                      action: "reizweg",
+                    }))
+                }}>WEG!</button>
+            </div>
+        )
+    } else {
+        return (
+            <div>
+                Es wurde {state.reizCurrentBid} geboten:
+                <br/>
+                <button onClick = {() => {
+                    ws.send(JSON.stringify({
+                      action: "reizanswer", value: true
+                    }))
+                }}>Ja</button>
+                oder
+                <button onClick = {() => {
+                    ws.send(JSON.stringify({
+                      action: "reizweg", value: false
+                    }))
+                }}>Nein</button>
+            </div>
+        )
+    }
 }
 
 export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
@@ -48,7 +100,11 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   let displayStich:Stich = [];
   let whoIsDran = "Das hier darfst du nicht sehen!";
   let sieSpielen = "Noch nix"
-  if (state.phase === "running") {
+
+  if (state.phase === "reizen") {
+      whoIsDran = state.yourTurn ? `Aluurm! Du bist dran!` : resolveNickname(state.turn) + " ist dran."
+      sieSpielen = "Gleich Skat ..."
+  } else if (state.phase === "running") {
     whoIsDran = state.yourTurn ? `Aluurm! Du bist dran!` : resolveNickname(state.turn) + " ist dran."
     displayStich = state.currentStich.length === 0 ? state.lastStich : state.currentStich;
     sieSpielen = state.gamemode
@@ -117,11 +173,14 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     </ul>
     </div>
 
-    <p>
+      <p>
       {whoIsDran}
-      <br />
-      <small>
-        {resolveNickname(state.you.position)} <button onClick={(_) => {
+      { state.phase === "reizen" ? <div><br/> <ReizInput ws={ws} state={state} /></div> : ""}
+      </p>
+
+      <p>
+        {"You are " + resolveNickname(state.you.position)}
+        <button onClick={(_) => {
           let name = prompt("Enter your name")
           if(name) {
             ws.send(JSON.stringify({
@@ -131,8 +190,9 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             localStorage.setItem("nickname", name)
           }
         }}>Change Name</button>
-      </small>
     </p>
+
+
 
     <div className="resign">
     Nächste Runde ({state.resign} / {Object.entries(state.names).length})
