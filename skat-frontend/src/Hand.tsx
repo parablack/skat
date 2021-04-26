@@ -18,6 +18,7 @@ function isActive(state:IState, s:string) {
 }
 
 function createPlayerStruct(state:IState, pos:string){
+    console.log(state)
     return {
         cards: state.you.cards,
         name: state.names[pos],
@@ -80,7 +81,8 @@ export const YourHand: React.FC<{ state: IState,  onClickCard: (card: ICard) => 
     let theta = 27 * Math.PI / 180; // inner angle of the arc (unit: rad)
 
 
-    return <div style={{maxWidth: (overlap * 10 * 7)+"rem"}}> <div style={{ display: 'flex', justifyContent: 'center', fontSize: '.8em', maxWidth: (overlap * 10 * 7)+"rem" }}>
+    return <div style={{maxWidth: (overlap * 10 * 7)+"rem"}}>
+        <div style={{ display: 'flex', justifyContent: 'center', fontSize: '.8em', maxWidth: (overlap * 10 * 7)+"rem" }}>
         {
             cards.map((card, index) => {
                 let width = cards.length * overlap;
@@ -126,7 +128,7 @@ export const OpponentHands: React.FC<{ state:IState }> = ({ state }) => {
     let right = createPlayerStruct(state, nextPlayer(nextPlayer(you)))
     return <div style={{
         display: 'flex',
-        justifyContent: 'flex-start', fontSize: '.8em', width: (overlap * 10 * 7)+"rem",
+        justifyContent: 'flex-start', fontSize: '.8em', width: (overlap * 10 * 7)+"rem", height: "8rem",
         position: "relative"
     }}>
     <div style={{
@@ -150,29 +152,38 @@ export const OpponentHands: React.FC<{ state:IState }> = ({ state }) => {
         <div><small>{right.position}</small></div>
     </div>
     <div style={{
-        display: 'flex',
-        transformOrigin: "bottom left",
-        transform: "translate(7%, -270%) rotate(140deg)"
+        position: "relative",
+        width: "100\%",
+        height: "100\%",
+        // display: 'flex',
+        transformOrigin: "center center",
+        transform: `translate(-33%, 5%) rotate(${180-40}deg)`,
     }}>
     {
         left.cards.map((card, index) => {
-            let theta = 89.9999 * Math.PI / 180;
-            let width = overlap * left.cards.length / 2;
-            let a = (left.cards.length - 1 - width) / 2; // leftmost x position of arc
-            let b = (left.cards.length - 1 + width) / 2; // rightmost x position of arc
+            let overl = 0.4
+            let scale = 0.55
+            let theta = 27 * Math.PI / 180;
+            let width = (overlap * 10 * 7);
+            let a = (width - (left.cards.length - 1) * 6 * overl * scale) / 2; // leftmost x position of arc
+            let b = (width + (left.cards.length - 1) * 6 * overl * scale) / 2; // rightmost x position of arc
             let t = (index + 0.5) / left.cards.length; // position on arc between 0 and 1
             let [x, y, r] = f(t, b - a, theta);
-            // y -= f(0.5, b - a, theta)[1] / 2;
+            x += a
+            y -= f(0.5, b - a, theta)[1] / 2;
             // x = 0;
-            y += 1.5;
+            // y += 0;
+            // x = 0;
             // r = 0;
 
-
             return <span style={{
-                transform: `translate(${(x - index) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad)`,
+                position: "absolute",
+                left: `${x-6/2}rem`,
+                bottom: `${y}rem`,
+                transform: `rotate(${r}rad) scale(${scale})`,
                 transformOrigin: 'center center',
             }}>
-            {/*<Card card={card} onClick={() => 0}></Card> */}
+            {<Card card={card} onClick={() => 0}></Card> }
 
             </span>
         })}
