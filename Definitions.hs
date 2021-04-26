@@ -6,6 +6,7 @@ module Definitions(Suit(..), Name(..), Card(..), Player(..),
      Stich(..), Reizwert(..), GameMode(..), Hopefully(..),
      PlayerPosition(..), SkatState(..), SkatStateForPlayer(..), ReceivePacket(..),
      ReizStateMachine(..),
+     SkatMove(..),
      deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn) where
 
 import Data.Maybe
@@ -141,8 +142,20 @@ reizTurn :: SkatState -> Maybe PlayerPosition
 reizTurn ReizPhase{reizAnsagerTurn=False, reizStateMachine=machine} = passiveReizPlayer machine
 reizTurn ReizPhase{reizAnsagerTurn=True, reizStateMachine=machine} = return $ activeReizPlayer machine
 
+data SkatMove
+    = PlayCard Card
+    | PlayVariant GameMode
+    | DiscardSkat Card Card
+    | ReizBid Reizwert
+    | ReizAnswer Bool
+    deriving (Show, Eq)
 
-data ReceivePacket = PlayCard Card | SetName String | PlayVariant GameMode | ShowCards | Resign | DiscardSkat Card Card | ReizBid Reizwert | ReizAnswer Bool deriving (Show, Eq)
+data ReceivePacket
+    = MakeMove SkatMove
+    | SetName String
+    | ShowCards
+    | Resign
+    deriving (Show, Eq)
 
 -- For Ramsch, grand
 simpleCompatible :: Card -> Card -> Bool

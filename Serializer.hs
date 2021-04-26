@@ -98,22 +98,17 @@ instance FromJSON Card where
 
 instance FromJSON ReceivePacket where
     parseJSON (Object obj) = do
-            action <- obj .: "action" :: Parser Text
-            case action of
-                "showcards" -> return ShowCards
-                "playcard" -> PlayCard <$> (obj .: "card" :: Parser Card)
-                "setname"  -> SetName  <$> (obj .: "name" :: Parser String)
-                "playvariant"  -> PlayVariant . gameModeFromString <$> (obj .: "variant" :: Parser String)
-                "discardskat" -> DiscardSkat <$>
-                                 obj .: "card1" <*>
-                                 obj .: "card2"
-                "resign" -> return Resign
-                "reizbid" -> do
-                    bid <- (obj .: "reizbid" :: Parser Int)
-                    return $ ReizBid (Reizwert bid)
-                "reizweg" ->
-                    return $ ReizBid Weg
-                "reizanswer" -> ReizAnswer <$> (obj .: "value" :: Parser Bool)
-                _ -> parseFail "Action unspecified."
+        action <- obj .: "action" :: Parser Text
+        case action of
+            "showcards"   -> return ShowCards
+            "playcard"    -> MakeMove . PlayCard <$> (obj .: "card" :: Parser Card)
+            "setname"     -> SetName  <$> (obj .: "name" :: Parser String)
+            "playvariant" -> MakeMove . PlayVariant . gameModeFromString <$> (obj .: "variant" :: Parser String)
+            "discardskat" -> MakeMove <$> (DiscardSkat <$> (obj .: "card1") <*>  (obj .: "card2"))
+            "resign"      -> return Resign
+            "reizbid"     -> (MakeMove . ReizBid . Reizwert) <$> (obj .: "reizbid" :: Parser Int)
+            "reizweg"     -> return . MakeMove $ ReizBid Weg
+            "reizanswer"  -> MakeMove . ReizAnswer <$> (obj .: "value" :: Parser Bool)
+            _             -> parseFail "Action unspecified."
 
     parseJSON _ = parseFail "Got no object."

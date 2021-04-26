@@ -11,35 +11,11 @@ import Data.Map  as Map
 import Data.Text
 import Data.Text.Encoding
 import Definitions
-import System.Random
-import Data.Array.IO
 import Serializer
 import Server
 import Skat
+import Util
 
-{- ============ util ======================== -}
-
-println :: MonadIO m => String -> m ()
-println = liftIO . putStrLn
-
-maxElem :: Ord a => [a] -> Maybe a
-maxElem = List.foldr (max . Just) Nothing
-
-shuffle :: MonadIO m => [a] -> m [a]
-shuffle xs = liftIO $ do
-        ar <- newArray n xs
-        forM [1..n] $ \i -> do
-            j <- randomRIO (i,n)
-            vi <- readArray ar i
-            vj <- readArray ar j
-            writeArray ar j vi
-            return vj
-  where
-    n = List.length xs
-    newArray :: Int -> [a] -> IO (IOArray Int a)
-    newArray n xs =  newListArray (1, n) xs
-
-{- ============ server logic ======================== -}
 
 data ClientData = ClientData
   { dataName     :: String,
@@ -118,10 +94,10 @@ countResigned =
 
 
 handlePlayerAction :: (MonadIO m, MonadServerState m) => Client -> ReceivePacket -> ExceptT String m ()
-handlePlayerAction client (PlayCard card) = do
+handlePlayerAction client (MakeMove move) = do
   record <- maybeToExceptT "Not connected!" $ lookupClient client
   skatState <- dataSkatState <$> get
-  newState <- liftEither $ play skatState (dataRole record) card
+  newState <- liftEither $ play skatState (dataRole record) move
   modify (\state -> state {dataSkatState = newState})
 
 handlePlayerAction client (SetName name) =
@@ -132,19 +108,6 @@ handlePlayerAction client Resign = do
   numResigned <- countResigned
   numPlayer <- List.length <$> getClients
   when (numResigned >= numPlayer) newGame
-
-handlePlayerAction client (ReizBid val) = do
-  record <- maybeToExceptT "Not connected!" $ lookupClient client
-  skatState <- dataSkatState <$> get
-  newState <- liftEither $ reizen skatState (dataRole record) val
-  modify (\state -> state {dataSkatState = newState})
-
-handlePlayerAction client (ReizAnswer val) = do
-  record <- maybeToExceptT "Not connected!" $ lookupClient client
-  skatState <- dataSkatState <$> get
-  newState <- liftEither $ reizenAntwort skatState (dataRole record) val
-  modify (\state -> state {dataSkatState = newState})
-
 
 handlePlayerAction _ _ = throwError "Not implemented yet!"
 
