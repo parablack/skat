@@ -20,7 +20,7 @@ function isActive(state: IState, s: string) {
 function createPlayerStruct(state: IState, pos: string) {
     console.log(state)
     return {
-        cards: state.you.cards,
+        cards: state.cards[pos],
         name: state.names[pos],
         position: pos,
         active: isActive(state, pos)
@@ -174,7 +174,7 @@ export const OpponentHands: React.FC<{ state: IState }> = ({ state }) => {
             transform: `translate(0%, 15%) rotate(${180 - 33}deg)`,
         }}>
             {<Hand
-                cards={state.you.cards}
+                cards={left.cards}
                 onClickCard={() => { }}
                 theta={27 * Math.PI / 180}
                 overlap={0.4}
@@ -188,7 +188,7 @@ export const OpponentHands: React.FC<{ state: IState }> = ({ state }) => {
             transform: `translate(0%, 15%) rotate(${180 + 33}deg)`,
         }}>
             {<Hand
-                cards={state.you.cards}
+                cards={right.cards}
                 onClickCard={() => { }}
                 theta={27 * Math.PI / 180}
                 overlap={0.4}

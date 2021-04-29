@@ -4,13 +4,15 @@ const geileMap:{[name:string]: string} = {
     "Diamonds": "♦",
     "Hearts": "♥",
     "Spades": "♠",
-    "Clubs": "♣"
+    "Clubs": "♣",
+    "?": "?"
 }
 const geileFarbenMap:{[name:string]: string} = {
     "Diamonds": "orange",
     "Hearts": "red",
     "Spades": "green",
-    "Clubs": "black"
+    "Clubs": "black",
+    "?": "gray"
 }
 const geileWerteMap:{[name:string]: string} = {
     "Ten": "10",
@@ -20,7 +22,8 @@ const geileWerteMap:{[name:string]: string} = {
     "Jack": "J",
     "Queen": "Q",
     "King": "K",
-    "Ace": "A"
+    "Ace": "A",
+    "?": ""
 }
 
 

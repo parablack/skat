@@ -4,74 +4,59 @@ export interface ICard { suit: string, name: string }
 
 export type Stich = ([ICard, Player])[]
 
+interface ICommonPlayerState {
+    resign: number,
+    you: IPlayerState,
+    names: { [player: string]: string },
+    cards: {[player: string]: ICard[]},
+    turn: string,
+    yourTurn: boolean
+}
+
 export interface IPlayerState {
     cards: ICard[],
     woncards: ICard[],
     position: Player
 }
 
-export interface IRunningState {
+export interface IRunningState extends ICommonPlayerState {
     phase: "running",
-    resign: number,
-    you: IPlayerState,
     gamemode: string,
     currentStich: Stich,
-    lastStich: Stich,
-    turn: string,
-    yourTurn: boolean,
-    names: { [player: string]: string },
+    lastStich: Stich
 }
-export interface IFinishedState {
+
+export interface IFinishedState extends ICommonPlayerState {
     phase: "finished",
-    resign: number,
-    you: IPlayerState,
-    names: { [player: string]: string },
     winner: string,
     scores: { [player: string]: number },
     currentStich: Stich
 }
-export interface IReizState {
+
+export interface IReizState extends ICommonPlayerState {
     phase: "reizen",
-    you: IPlayerState,
-    turn: string,
-    names: { [player: string]: string },
-    yourTurn: boolean,
     reizAnsagerTurn: boolean,
     reizCurrentBid: number,
     resign: number
 }
 
 
-export interface ISkatPickingPhase {
+export interface ISkatPickingPhase extends ICommonPlayerState {
     phase: "skatpicking",
-    you: IPlayerState,
-    turn: string,
-    names: { [player: string]: string },
-    resign: number
-    yourTurn: boolean,
     cardsToDiscard: ICard[]
 }
 
-export interface IGamePickingState {
-    phase: "gamepicking",
-    you: IPlayerState,
-    turn: string,
-    names: { [player: string]: string },
-    resign: number
-    yourTurn: boolean,
+export interface IGamePickingState extends ICommonPlayerState {
+    phase: "gamepicking"
 }
 
 
-export interface IEmptyState {
-    phase: "empty",
-    names: { [player: string]: string },
-    resign: number,
-    you: IPlayerState,
-    turn: string,
+export interface IEmptyState extends ICommonPlayerState {
+    phase: "empty"
 }
 
 export type IState = IFinishedState | IRunningState | IReizState | ISkatPickingPhase | IGamePickingState | IEmptyState
 
-export const DEBUG_STATE: IState = { phase: "empty", names: {}, you: { "cards": [], "woncards": [], "position": "Vorhand" }, turn: "nobody", resign: 0 }
+export const DEBUG_STATE: IState = { phase: "empty", names: {}, you: { "cards": [], "woncards": [], "position": "Vorhand" }, turn: "nobody", resign: 0, cards: {"Geber":[], "Vorhand": [], "Mittelhand": []}, yourTurn: false }
     // { "yourTurn": false, "gamemode": "Ramsch", "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }
    // { "yourTurn": true, "reizAnsagerTurn": true, "reizCurrentBid": 18, "phase": "reizen", "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }
