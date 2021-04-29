@@ -53,14 +53,16 @@ playersFromDeck deck = [Player Geber (slice 0 9 deck) [],
 -- data GamemodeGrand =     GamemodeGrand
 -- data GamemodeNull =      GamemodeNull
 
-gameModeFromString :: String -> GameMode
-gameModeFromString "Ramsch" = mRamsch
-gameModeFromString "Null" = mNull
-gameModeFromString "Grand" = mGrand
-gameModeFromString "ColorHearts" = mColor Hearts
-gameModeFromString "ColorSpades" = mColor Spades
-gameModeFromString "ColorDiamonds" = mColor Diamonds
-gameModeFromString "ColorClubs" = mColor Clubs
+gameModeFromString :: String -> Hopefully GameMode
+-- gameModeFromString "Ramsch" = mRamsch -- Cannot be chosen
+gameModeFromString "Null" = return mNull
+gameModeFromString "Grand" = return mGrand
+gameModeFromString "ColorHearts" = return $ mColor Hearts
+gameModeFromString "ColorSpades" = return $ mColor Spades
+gameModeFromString "ColorDiamonds" = return $ mColor Diamonds
+gameModeFromString "ColorClubs" = return $ mColor Clubs
+gameModeFromString "Ramsch" = throwError "Ramsch cannot be actively played"
+gameModeFromString _ = throwError "Invalid game variant. Do you even h4xx?"
 
 skatFromDeck :: [Card] -> [Card]
 skatFromDeck deck = slice 30 31 deck
@@ -223,8 +225,8 @@ play state@SkatPickingPhase{singlePlayer=Just singlePlayer} pos (PlayCard card) 
     case playerAmountCards - 1 of
         11 -> return newState
         10 -> return GamePickingPhase {
-            players = players state,
-            reizCurrentBid = reizCurrentBid state,
+            players = players newState,
+            reizCurrentBid = reizCurrentBid newState,
             singlePlayer = Just singlePlayer
         }
         _  -> error "I am in SkatPicking state, but theres no Skat to Discard."
@@ -267,7 +269,7 @@ play stateOrig@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=False} player
 play ReizPhase{} _ _ = throwError "pattern in reizAntwort does not match."
 
 play state@GamePickingPhase{} player (PlayVariant var) = do
-    assert (reizTurn state == Just player) "Du bist nicht dran mit Spiel auswählen!"
+    assert (singlePlayer state == Just player) "Du bist nicht dran mit Spiel auswählen!"
     return $ RunningPhase {
         players = players state,
         singlePlayer = singlePlayer state,

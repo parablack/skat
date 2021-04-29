@@ -120,6 +120,14 @@ instance FromJSON Card where
         Card <$> (card .: "name") <*> card .: "suit"
     parseJSON _ = parseFail "Card must be an object."
 
+instance FromJSON GameMode where
+    parseJSON (String card) = do
+        case gameModeFromString (unpack card) of
+            Right var -> return var
+            Left err -> parseFail err
+    parseJSON _ = parseFail "PlayVariant must be a string."
+
+
 instance FromJSON ReceivePacket where
     parseJSON (Object obj) = do
         action <- obj .: "action" :: Parser Text
@@ -127,7 +135,7 @@ instance FromJSON ReceivePacket where
             "showcards"   -> return ShowCards
             "playcard"    -> MakeMove . PlayCard <$> (obj .: "card" :: Parser Card)
             "setname"     -> SetName  <$> (obj .: "name" :: Parser String)
-            "playvariant" -> MakeMove . PlayVariant . gameModeFromString <$> (obj .: "variant" :: Parser String)
+            "playvariant" -> MakeMove . PlayVariant <$> (obj .: "variant" :: Parser GameMode)
             "discardskat" -> MakeMove <$> (DiscardSkat <$> (obj .: "card1") <*>  (obj .: "card2"))
             "resign"      -> return Resign
             "reizbid"     -> (MakeMove . ReizBid . Reizwert) <$> (obj .: "reizbid" :: Parser Int)

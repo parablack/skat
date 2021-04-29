@@ -6,6 +6,7 @@ import Data.List
 import Data.Ord
 import Data.Maybe
 
+
 simpleWinner :: Map PlayerPosition Int -> PlayerPosition
 simpleWinner = fst . maximumBy (comparing snd) . assocs
 
