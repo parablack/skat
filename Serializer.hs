@@ -18,7 +18,9 @@ instance ToJSON Card where
     toJSON (Card name suit) = object ["suit" .= suit, "name" .= name]
 
 instance ToJSON GameMode where
-    toJSON = Data.Aeson.String . pack . nicesShow
+    toJSON gm = object ["kind" .= fst meta,
+                     "color" .= snd meta ]
+                where meta = nicesShow gm
 
 
 
@@ -77,6 +79,9 @@ personalizedSkatState state@RunningPhase{} player = [
                     [] -> []
                     (x:xs) -> Data.List.reverse x,
                 "yourTurn" .=  (player == turn state),
+                "singlePlayer" .= (case singlePlayer state of
+                    Nothing -> "nobody"
+                    Just x -> toJSON x),
                 "turn" .= turn state
             ]
 personalizedSkatState state@GameFinishedState{} player = [
