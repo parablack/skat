@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
-import { DEBUG_STATE, ICard, IReizState, Stich } from './State';
+import { DEBUG_STATE, ICard, IGamePickingState, IReizState, ISkatPickingPhase, Stich } from './State';
 import { Card } from './Card';
 import { YourHand, OpponentHands } from './Hand';
 import { Scoreboard } from './Scoreboard';
@@ -34,7 +34,7 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
         <br />
         <br />
         <br />
-                Es wurde schon {state.reizCurrentBid} geboten.
+        Es wurde schon {state.reizCurrentBid} geboten.
       </div>
     )
   }
@@ -87,6 +87,45 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
   }
 }
 
+
+const GamePickInput: React.FC<{ ws: WebSocket, state: IGamePickingState }> = ({ ws, state }) => {
+  let dropdown = React.useRef<HTMLSelectElement>(null);
+
+  if (!state.yourTurn)
+    return <h1>{state.names[state.turn]} wählt das Spiel ...</h1>
+
+  return (
+    <div>
+      <label>Was willst du spielen?</label>
+      <br />
+      <select ref={dropdown} defaultValue="ColorDiamonds">
+        <option value="ColorDiamonds">♦</option>
+        <option value="ColorHearts">♥</option>
+        <option value="ColorSpades">♠</option>
+        <option value="ColorClubs">♣</option>
+        <option value="Null">Null</option>
+        <option value="Grand">Grand</option>
+      </select>
+      <button onClick={() => {
+        ws.send(JSON.stringify({
+          action: "playvariant",
+          variant: dropdown!.current!.value,
+        }))
+      }}>Spielen</button>
+    </div>
+  )
+}
+
+
+
+const SkatPickInput: React.FC<{ ws: WebSocket, state: ISkatPickingPhase }> = ({ ws, state }) => {
+  if (!state.yourTurn)
+    return <h1>{state.names[state.turn]} wählt den Skat ...</h1>
+  return (
+    <h1>Wähle deinen Skat ...</h1>
+  )
+}
+
 export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   const [state, setState] = useState(DEBUG_STATE) /* TODO: remove DEBUG_STATE */
   // const [nickname, setNickname] = useState(undefined)
@@ -110,10 +149,14 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   }, [ws])
 
   let displayStich: Stich = [];
-  let sieSpielen = "Noch nix"
+  let sieSpielen = "TODO:" + state.phase // "Noch nix"
 
   if (state.phase === "reizen") {
-    sieSpielen = "Gleich Skat ..."
+    sieSpielen = "Reizen ..."
+  } else if (state.phase === "skatpicking") {
+    sieSpielen = "Skat wählen ..."
+  } else if (state.phase === "gamepicking") {
+    sieSpielen = "Spiel wählen ..."
   } else if (state.phase === "running") {
     displayStich = state.currentStich.length === 0 ? state.lastStich : state.currentStich;
     sieSpielen = state.gamemode
@@ -153,7 +196,8 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
 
             {state.phase === "empty" ? <h1>Server ist down :(</h1> : null}
             {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
-            {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
+            {state.phase === "skatpicking" ? <SkatPickInput ws={ws} state={state} /> : null}
+            {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
             {state.phase === "running" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
           </div>
 
