@@ -31,9 +31,6 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
         textAlign: 'center',
         verticalAlign: 'center'
       }}>
-        <br />
-        <br />
-        <br />
         Es wurde schon {state.reizCurrentBid} geboten.
       </div>
     )
@@ -192,16 +189,16 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             <OpponentHands state={state} />
           </span>
 
-          <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin' }}>
-
+          <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin', display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
             {state.phase === "empty" ? <h1>Server ist down :(</h1> : null}
             {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
             {state.phase === "skatpicking" ? <SkatPickInput ws={ws} state={state} /> : null}
             {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
             {state.phase === "running" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
+            {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
           </div>
 
-          {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
+
 
           <span style={{ margin: '.4em' }}>
             <YourHand state={state} onClickCard={card => {
