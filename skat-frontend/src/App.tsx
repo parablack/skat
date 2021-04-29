@@ -9,89 +9,89 @@ import { Scoreboard } from './Scoreboard';
 
 const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
   return <div> {cards.length ? (
-      <span style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
-        {cards.map(([card, name], index) => {
-          return <span style={{}} key={index}>
-            <Card card={card} player={name}></Card>
-          </span>
-        })}
-      </span>
-    ) : (
-      <img src={logo} className="App-logo" alt="logo" />
-    )} </div>
+    <span style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
+      {cards.map(([card, name], index) => {
+        return <span style={{}} key={index}>
+          <Card card={card} player={name}></Card>
+        </span>
+      })}
+    </span>
+  ) : (
+    <img src={logo} className="App-logo" alt="logo" />
+  )} </div>
 }
 
-const ReizInput: React.FC<{ws: WebSocket, state: IReizState}> = ({ws, state}) => {
+const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }) => {
 
-    let textInput  = React.useRef<HTMLInputElement>(null);
+  let textInput = React.useRef<HTMLInputElement>(null);
 
-    if (!state.yourTurn) {
-        return (
-            <div style={{
-              textAlign: 'center',
-              verticalAlign: 'center'
-            }}>
-              <br />
-              <br />
-              <br />
+  if (!state.yourTurn) {
+    return (
+      <div style={{
+        textAlign: 'center',
+        verticalAlign: 'center'
+      }}>
+        <br />
+        <br />
+        <br />
                 Es wurde schon {state.reizCurrentBid} geboten.
-            </div>
-        )
-    }
+      </div>
+    )
+  }
 
-    if (state.reizAnsagerTurn) {
-        return (
-            <div>
-                Du darfst
-                <br/>
-                <input ref={textInput}
-                       style={{textAlign: "center" }}
-                       type="number"
-                       min={state.reizCurrentBid}
-                       max="100"
-                       size={5}
-                       defaultValue={state.reizCurrentBid+1}
-                />
-                <button onClick = {() => {
-                    ws.send(JSON.stringify({
-                        action: "reizbid",
-                        reizbid: parseInt(textInput!.current!.value),
-                    }))
-                }}>bieten</button>
+  if (state.reizAnsagerTurn) {
+    return (
+      <div>
+        Du darfst
+        <br />
+        <input ref={textInput}
+          style={{ textAlign: "center" }}
+          type="number"
+          min={state.reizCurrentBid}
+          max="100"
+          size={5}
+          defaultValue={state.reizCurrentBid + 1}
+        />
+        <button onClick={() => {
+          ws.send(JSON.stringify({
+            action: "reizbid",
+            reizbid: parseInt(textInput!.current!.value),
+          }))
+        }}>bieten</button>
                 oder
-                <button onClick = {() => {
-                    ws.send(JSON.stringify({
-                      action: "reizweg",
-                    }))
-                }}>WEG!</button>
-            </div>
-        )
-    } else {
-        return (
-            <div>
-                Es wurde {state.reizCurrentBid} geboten:
-                <br/>
-                <button onClick = {() => {
-                    ws.send(JSON.stringify({
-                      action: "reizanswer", value: true
-                    }))
-                }}>Ja</button>
+        <button onClick={() => {
+          ws.send(JSON.stringify({
+            action: "reizweg",
+          }))
+        }}>WEG!</button>
+      </div>
+    )
+  } else {
+    return (
+      <div>
+        Es wurde {state.reizCurrentBid} geboten:
+        <br />
+        <button onClick={() => {
+          ws.send(JSON.stringify({
+            action: "reizanswer", value: true
+          }))
+        }}>Ja</button>
                 oder
-                <button onClick = {() => {
-                    ws.send(JSON.stringify({
-                      action: "reizanswer", value: false
-                    }))
-                }}>Nein</button>
-            </div>
-        )
-    }
+        <button onClick={() => {
+          ws.send(JSON.stringify({
+            action: "reizanswer", value: false
+          }))
+        }}>Nein</button>
+      </div>
+    )
+  }
 }
 
 export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   const [state, setState] = useState(DEBUG_STATE) /* TODO: remove DEBUG_STATE */
   // const [nickname, setNickname] = useState(undefined)
 
-  let resolveNickname = (pos:string) => state.names[pos] || pos
+  let resolveNickname = (pos: string) => state.names[pos] || pos
 
 
   useEffect(() => {
@@ -109,11 +109,11 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     return () => ws.close()
   }, [ws])
 
-  let displayStich:Stich = [];
+  let displayStich: Stich = [];
   let sieSpielen = "Noch nix"
 
   if (state.phase === "reizen") {
-      sieSpielen = "Gleich Skat ..."
+    sieSpielen = "Gleich Skat ..."
   } else if (state.phase === "running") {
     displayStich = state.currentStich.length === 0 ? state.lastStich : state.currentStich;
     sieSpielen = state.gamemode
@@ -124,7 +124,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
 
   return (
     <div className="App" style={{
-        height: "100%",
+      height: "100%",
     }}>
       <section style={{
         backgroundColor: '#282c34',
@@ -137,60 +137,60 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
         height: '100%'
       }}>
 
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-evenly',
-        alignItems: 'center',
-        height: '100%'
-    }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-evenly',
+          alignItems: 'center',
+          height: '100%'
+        }}>
 
-        <span style={{ margin: '.4em' }}>
+          <span style={{ margin: '.4em' }}>
             <OpponentHands state={state} />
-        </span>
+          </span>
 
-        <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin' }}>
-      { state.phase === "reizen" ?
-          (<ReizInput ws={ws} state={state} />)
-          :
-          (<TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />)
-      }
-      </div>
+          <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin' }}>
 
-        { state.phase === "finished" ? <Scoreboard state={state} /> : ""}
+            {state.phase === "empty" ? <h1>Server ist down :(</h1> : null}
+            {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
+            {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
+            {state.phase === "running" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
+          </div>
 
-        <span style={{ margin: '.4em' }}>
-          <YourHand state={state} onClickCard={card => {
-            console.log("clicked card", card)
-            ws.send(JSON.stringify({
-              action: "playcard",
-              card,
-            }))
-          }} onChangeName={name => {
-          ws.send(JSON.stringify({
-            action: "setname",
-            name
-          }))
-          localStorage.setItem("nickname", name)
-          }} />
-        </span>
+          {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
 
-      </div>
+          <span style={{ margin: '.4em' }}>
+            <YourHand state={state} onClickCard={card => {
+              console.log("clicked card", card)
+              ws.send(JSON.stringify({
+                action: "playcard",
+                card,
+              }))
+            }} onChangeName={name => {
+              ws.send(JSON.stringify({
+                action: "setname",
+                name
+              }))
+              localStorage.setItem("nickname", name)
+            }} />
+          </span>
 
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-evenly',
-        alignItems: 'center',
-        height: '100%'
-    }}>
-    <header>
-      Wilkommen auf der Ramschinsel!
+        </div>
+
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-evenly',
+          alignItems: 'center',
+          height: '100%'
+        }}>
+          <header>
+            Wilkommen auf der Ramschinsel!
       <br />
-      <small>Heute spielen Sie: {sieSpielen}</small>
-    </header>
+            <small>Heute spielen Sie: {sieSpielen}</small>
+          </header>
 
-{ /*
+          { /*
     <div className="nameList">
     Ihre Mitspieler:
     <ul>
@@ -200,15 +200,15 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     </div>
       */ }
 
-    <div className="resign">
-    Nächste Runde ({state.resign} / {Object.entries(state.names).length})
-    <br />
-    <button onClick={(_) => {ws.send(JSON.stringify({action: "resign", }))}}>
-    Aufgeben
-    </button>
-    </div>
+          <div className="resign">
+            Nächste Runde ({state.resign} / {Object.entries(state.names).length})
+            <br />
+            <button onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
+              Aufgeben
+            </button>
+          </div>
 
-      </div>
+        </div>
 
       </section>
     </div>
