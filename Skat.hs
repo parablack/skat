@@ -225,8 +225,8 @@ play state@SkatPickingPhase{singlePlayer=Just singlePlayer} pos (PlayCard card) 
     case playerAmountCards - 1 of
         11 -> return newState
         10 -> return GamePickingPhase {
-            players = players state,
-            reizCurrentBid = reizCurrentBid state,
+            players = players newState,
+            reizCurrentBid = reizCurrentBid newState,
             singlePlayer = Just singlePlayer
         }
         _  -> error "I am in SkatPicking state, but theres no Skat to Discard."
@@ -269,7 +269,7 @@ play stateOrig@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=False} player
 play ReizPhase{} _ _ = throwError "pattern in reizAntwort does not match."
 
 play state@GamePickingPhase{} player (PlayVariant var) = do
-    assert (reizTurn state == Just player) "Du bist nicht dran mit Spiel auswählen!"
+    assert (singlePlayer state == Just player) "Du bist nicht dran mit Spiel auswählen!"
     return $ RunningPhase {
         players = players state,
         singlePlayer = singlePlayer state,
