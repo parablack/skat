@@ -72,50 +72,66 @@ function f(t: number, b: number, theta: number) {
     return [fx / fr, fy / fr, rot];
 }
 
+const Hand: React.FC<{
+        cards: ICard[],
+        onClickCard: (card: ICard) => void,
+        theta: number,
+        overlap: number,
+        scale: number }>
+        = ({cards, onClickCard, theta, overlap, scale}) => {
+
+    return (<div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            fontSize: '.8em',
+            width: (overlap * scale * 10 * 7) + "rem"
+        }}>
+        {
+        cards.map((card, index) => {
+            let width = cards.length * overlap * scale;
+            let a = (cards.length - width) / 2; // leftmost x position of arc
+            let b = (cards.length + width) / 2; // rightmost x position of arc
+            let t = (index + 0.5) / cards.length;   // position on arc between 0 and 1
+            let [x, y, r] = f(t, b - a, theta);
+            x += a
+            y -= f(0.5, b - a, theta)[1] / 2;
+            return (
+                <span key={index} style={{
+                    transform: `translate(${(x-index-0.5) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad) scale(${scale})`,
+                    transformOrigin: 'center center',
+                }}>
+                <Card card={card} onClick={() => onClickCard(card)}></Card>
+                </span>)
+            })
+        }
+        </div>)
+}
 
 
 export const YourHand: React.FC<{ state: IState,  onClickCard: (card: ICard) => void, onChangeName: (name:string) => void }> = ({ state, onClickCard, onChangeName }) => {
     let cards = state.you.cards;
     let you = createPlayerStruct(state, state.you.position);
 
-    let theta = 27 * Math.PI / 180; // inner angle of the arc (unit: rad)
-
-
-    return <div style={{maxWidth: (overlap * 10 * 7)+"rem"}}>
-        <div style={{ display: 'flex', justifyContent: 'center', fontSize: '.8em', maxWidth: (overlap * 10 * 7)+"rem" }}>
-        {
-            cards.map((card, index) => {
-                let width = cards.length * overlap;
-                let a = (cards.length - 1 - width) / 2; // leftmost x position of arc
-                let b = (cards.length - 1 + width) / 2; // rightmost x position of arc
-
-                let t = (index + 0.5) / cards.length; // position on arc between 0 and 1
-
-                let [x, y, r] = f(t, b - a, theta);
-                x += a
-                y -= f(0.5, b - a, theta)[1] / 2;
-
-
-                return <span key={index} style={{
-                    transform: `translate(${(x - index) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad)`,
-                    transformOrigin: 'center center',
-                }}>
-                    <Card card={card} onClick={() => onClickCard(card)}></Card>
-                </span>
-            })}
-    </div>
-    <div style={{
-        color: you.active ? "red" : "white"
-    }}>
-        <div>{you.name}</div> <button onClick={(_) => {
-          let name = prompt("Enter your name")
-          if(name) {
-              onChangeName(name);
-          }
+    return <div>
+        <Hand
+            cards = {cards}
+            onClickCard = {onClickCard}
+            theta = {27 * Math.PI / 180}
+            overlap = {0.5}
+            scale = {1}
+        ></Hand>
+        <div style={{
+            color: you.active ? "red" : "white"
+        }}>
+        <div>{you.name}</div>
+        <button onClick={(_) => {
+            let name = prompt("Enter your name")
+            if(name) {
+                onChangeName(name);
+            }
         }}>Change Name</button>
         <div><small>{you.position}</small></div>
-    </div>
-
+        </div>
     </div>
 }
 
@@ -123,7 +139,6 @@ export const YourHand: React.FC<{ state: IState,  onClickCard: (card: ICard) => 
 
 export const OpponentHands: React.FC<{ state:IState }> = ({ state }) => {
     let you  = state.you.position;
-
     let left = createPlayerStruct(state, nextPlayer(you))
     let right = createPlayerStruct(state, nextPlayer(nextPlayer(you)))
     return <div style={{
@@ -152,41 +167,32 @@ export const OpponentHands: React.FC<{ state:IState }> = ({ state }) => {
         <div><small>{right.position}</small></div>
     </div>
     <div style={{
-        position: "relative",
-        width: "100\%",
-        height: "100\%",
-        // display: 'flex',
+        position: "absolute",
+        left: "0",
         transformOrigin: "center center",
-        transform: `translate(-33%, 5%) rotate(${180-40}deg)`,
+        transform: `translate(0%, 15%) rotate(${180-33}deg)`,
     }}>
-    {
-        left.cards.map((card, index) => {
-            let overl = 0.4
-            let scale = 0.55
-            let theta = 27 * Math.PI / 180;
-            let width = (overlap * 10 * 7);
-            let a = (width - (left.cards.length - 1) * 6 * overl * scale) / 2; // leftmost x position of arc
-            let b = (width + (left.cards.length - 1) * 6 * overl * scale) / 2; // rightmost x position of arc
-            let t = (index + 0.5) / left.cards.length; // position on arc between 0 and 1
-            let [x, y, r] = f(t, b - a, theta);
-            x += a
-            y -= f(0.5, b - a, theta)[1] / 2;
-            // x = 0;
-            // y += 0;
-            // x = 0;
-            // r = 0;
-
-            return <span style={{
-                position: "absolute",
-                left: `${x-6/2}rem`,
-                bottom: `${y}rem`,
-                transform: `rotate(${r}rad) scale(${scale})`,
-                transformOrigin: 'center center',
-            }}>
-            {<Card card={card} onClick={() => 0}></Card> }
-
-            </span>
-        })}
-        </div>
+        {<Hand
+            cards = {state.you.cards}
+            onClickCard = { () => {} }
+            theta = {27 * Math.PI / 180}
+            overlap = {0.4}
+            scale = {0.55}
+        ></Hand>}
+    </div>
+    <div style={{
+        position: "absolute",
+        right: "0",
+        transformOrigin: "center center",
+        transform: `translate(0%, 15%) rotate(${180+33}deg)`,
+    }}>
+        {<Hand
+            cards = {state.you.cards}
+            onClickCard = { () => {} }
+            theta = {27 * Math.PI / 180}
+            overlap = {0.4}
+            scale = {0.55}
+        ></Hand>}
+    </div>
     </div>
 }
