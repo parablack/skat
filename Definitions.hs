@@ -68,6 +68,8 @@ data Reizwert = Weg | Reizwert Int deriving (Eq, Show)
 
 type Hopefully = Either String
 
+type GameModeMeta = (String, String) -- description, suit
+
 data GameMode = GameMode {
     cardsCompatible :: Card -> Card -> Bool,
     -- compare the two cards,
@@ -75,10 +77,10 @@ data GameMode = GameMode {
     scoreMultiplier :: Int,
     -- single player, scores, winner
     determineGameWinner :: Maybe PlayerPosition -> (Map PlayerPosition Int) -> [PlayerPosition],
-    nicesShow :: String
+    nicesShow :: GameModeMeta
 }
 instance (Show GameMode) where
-    show = nicesShow
+    show x = (fst $ nicesShow x) ++ " " ++ (snd $ nicesShow x)
 instance (Eq GameMode) where
     (==) x y = nicesShow x == nicesShow y
 

@@ -22,7 +22,7 @@ mRamsch = GameMode {
     cardSmaller = simpleCardLE,
     scoreMultiplier = 1,
     determineGameWinner = \_ -> (return . simpleWinner),
-    nicesShow = "Ramsch"
+    nicesShow = ("Ramsch", "")
 }
 
 mGrand = GameMode {
@@ -32,7 +32,7 @@ mGrand = GameMode {
     determineGameWinner = \x -> case x of
                                 Just player -> simpleTeamWinner player
                                 _ -> error "Grand but nobody played??",
-    nicesShow = "Grand"
+    nicesShow = ("Grand", "")
 }
 
 farbCompatible :: Suit -> Card -> Card -> Bool
@@ -46,12 +46,13 @@ farbCompatible suit (Card _ s') (Card Jack _)
 farbCompatible _ (Card _ c1) (Card _ c2) = c1 == c2
 
 farbCardLE :: Suit -> Card -> Card -> Bool
-farbCardLE _ a b
-    | simpleCardLE a b == True = True
-farbCardLE suit (Card k1 s1) (Card k2 s2)
+farbCardLE _ (Card Jack suit) (Card Jack suit') = suit <= suit'
+farbCardLE _ (Card Jack _) (Card _ _) = False
+farbCardLE _ (Card _ _) (Card Jack _) = True
+farbCardLE suit c1@(Card k1 s1) c2@(Card k2 s2)
     | suit == s2 && suit /= s1 = True
     | suit == s2 && suit == s1 = k1 <= k2
-    | otherwise = False
+    | otherwise = simpleCardLE c1 c2
 
 
 mColor :: Suit -> GameMode
@@ -62,7 +63,7 @@ mColor color = GameMode {
     determineGameWinner = \x -> case x of
                                 Just player -> simpleTeamWinner player
                                 _ -> error "Farb but nobody played??",
-    nicesShow = "Farbspiel " ++ (show color)
+    nicesShow = ("Farbspiel", (show color))
 }
 
 nullCompatible :: Card -> Card -> Bool
@@ -88,7 +89,7 @@ mNull = GameMode {
     determineGameWinner = \x -> case x of
                                 Just player -> nullWinner player
                                 _ -> error "Null but nobody played??",
-    nicesShow = "Null"
+    nicesShow = ("Null", "")
 }
 
 
