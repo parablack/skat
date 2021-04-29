@@ -71,8 +71,9 @@ nullCompatible (Card _ suit) (Card _ suit') = suit == suit'
 
 
 nullOrdering = [Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
-nullCardLE (Card x _) (Card y _) = fromJust (elemIndex x nullOrdering) <= fromJust (elemIndex y nullOrdering)
-
+nullCardLE (Card x suit) (Card y suit')
+    | suit == suit' = fromJust (elemIndex x nullOrdering) <= fromJust (elemIndex y nullOrdering)
+    | otherwise     = False
 
 -- TODO Stiche vs. Punkte
 nullWinner :: PlayerPosition -> Map PlayerPosition Int -> [PlayerPosition]

@@ -72,7 +72,7 @@ personalizedSkatState state@RunningPhase{} player = [
             ]
 personalizedSkatState state@GameFinishedState{} player = [
                 "phase" .= pack "finished",
-                "currentStich" .= lastStich state,
+                "currentStich" .= Data.List.reverse (lastStich state),
                 "yourTurn" .= False,
                 "scores" .= Data.Map.mapKeys show (scores state),
                 "winner" .= winner state

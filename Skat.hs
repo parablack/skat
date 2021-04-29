@@ -73,7 +73,7 @@ initialStateFromDeck deck = ReizPhase {
         skat = skatFromDeck deck,
         reizStateMachine = MittelhandVorhand,
         reizAnsagerTurn = True,
-        reizCurrentBid = 0
+        reizCurrentBid = 17
 }
 
 ramschFromShuffledDeck :: [Card] -> SkatState
@@ -236,7 +236,12 @@ play state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player (Rei
     let reizHighEnough = case val of
             Weg -> True
             Reizwert wert -> wert > (reizCurrentBid state)
+    let reizLowEnough = case val of
+            Weg -> True
+            Reizwert wert -> wert <= 264
+
     assert (reizHighEnough) "Dein Gebot war zu billig! Gib dir mehr Mühe!"
+    assert (reizLowEnough) "Dein Gebot war zu teuer! Gib dir weniger Mühe!"
     case val of
         Reizwert x ->
             if machine == VorhandNix then
@@ -246,7 +251,7 @@ play state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player (Rei
             return $ case machine of
                 VorhandNix -> ramschFromReiz state
                 MittelhandVorhand -> state { reizStateMachine = GeberVorhand }
-                GeberVorhand -> if reizCurrentBid state == 0 then
+                GeberVorhand -> if reizCurrentBid state <= 17 then
                                     state { reizStateMachine = VorhandNix }
                                 else skatPickingFromReiz state Vorhand -- hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
                 MittelhandGeber -> skatPickingFromReiz state Geber

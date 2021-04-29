@@ -31,7 +31,7 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
         textAlign: 'center',
         verticalAlign: 'center'
       }}>
-        Es wurde schon {state.reizCurrentBid} geboten.
+        Es wurde {state.reizCurrentBid === 17 ? <>noch nix</> : state.reizCurrentBid} geboten.
       </div>
     )
   }
@@ -230,16 +230,18 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             Wilkommen auf der Ramschinsel!
             <br />
             <small>
-              {state.phase === 'running' && state.gamemode.kind === "Farbspiel"
+              {state.phase === 'running'
                 ? <span>
                   {!state.singlePlayer || state.singlePlayer === state.you.position
                     ? <span>Heute spielen Sie:</span>
                     : <span>Heute spielt {state.names[state.singlePlayer]}:</span>}
                   {' '}
-                  <span style={{ color: geileFarbenMap[state.gamemode.color] }}>
-                    {geileMap[state.gamemode.color]}
-                  </span>{' '}
-                  {geileDeutschMap[state.gamemode.color]}
+                  {state.gamemode.kind === "Farbspiel" ? <>
+                    <span style={{ color: geileFarbenMap[state.gamemode.color] }}>
+                      {geileMap[state.gamemode.color]}
+                    </span>{' '}
+                    {geileDeutschMap[state.gamemode.color]}</>
+                    : state.gamemode.kind}
                 </span>
                 : <span>Heute spielen Sie: {sieSpielen}</span>}
             </small>
