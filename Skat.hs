@@ -53,14 +53,16 @@ playersFromDeck deck = [Player Geber (slice 0 9 deck) [],
 -- data GamemodeGrand =     GamemodeGrand
 -- data GamemodeNull =      GamemodeNull
 
-gameModeFromString :: String -> GameMode
-gameModeFromString "Ramsch" = mRamsch
-gameModeFromString "Null" = mNull
-gameModeFromString "Grand" = mGrand
-gameModeFromString "ColorHearts" = mColor Hearts
-gameModeFromString "ColorSpades" = mColor Spades
-gameModeFromString "ColorDiamonds" = mColor Diamonds
-gameModeFromString "ColorClubs" = mColor Clubs
+gameModeFromString :: String -> Hopefully GameMode
+-- gameModeFromString "Ramsch" = mRamsch -- Cannot be chosen
+gameModeFromString "Null" = return mNull
+gameModeFromString "Grand" = return mGrand
+gameModeFromString "ColorHearts" = return $ mColor Hearts
+gameModeFromString "ColorSpades" = return $ mColor Spades
+gameModeFromString "ColorDiamonds" = return $ mColor Diamonds
+gameModeFromString "ColorClubs" = return $ mColor Clubs
+gameModeFromString "Ramsch" = throwError "Ramsch cannot be actively played"
+gameModeFromString _ = throwError "Invalid game variant. Do you even h4xx?"
 
 skatFromDeck :: [Card] -> [Card]
 skatFromDeck deck = slice 30 31 deck
