@@ -72,41 +72,41 @@ function f(t: number, b: number, theta: number) {
     return [fx / fr, fy / fr, rot];
 }
 
-const Hand: React.FC<{
+interface IHandProps {
     cards: ICard[],
     onClickCard: (card: ICard) => void,
     theta: number,
     overlap: number,
     scale: number
-}>
-    = ({ cards, onClickCard, theta, overlap, scale }) => {
+}
 
-        return (<div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            fontSize: '.8em',
-            width: (overlap * scale * 10 * 7) + "rem"
-        }}>
-            {
-                cards.map((card, index) => {
-                    let width = cards.length * overlap * scale;
-                    let a = (cards.length - width) / 2; // leftmost x position of arc
-                    let b = (cards.length + width) / 2; // rightmost x position of arc
-                    let t = (index + 0.5) / cards.length;   // position on arc between 0 and 1
-                    let [x, y, r] = f(t, b - a, theta);
-                    x += a
-                    y -= f(0.5, b - a, theta)[1] / 2;
-                    return (
-                        <span key={index} style={{
-                            transform: `translate(${(x - index - 0.5) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad) scale(${scale})`,
-                            transformOrigin: 'center center',
-                        }}>
-                            <Card card={card} onClick={() => onClickCard(card)}></Card>
-                        </span>)
-                })
-            }
-        </div>)
-    }
+const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale }) => {
+    return (<div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        fontSize: '.8em',
+        width: (overlap * scale * 10 * 7) + "rem"
+    }}>
+        {
+            cards.map((card, index) => {
+                let width = cards.length * overlap * scale;
+                let a = (cards.length - width) / 2; // leftmost x position of arc
+                let b = (cards.length + width) / 2; // rightmost x position of arc
+                let t = (index + 0.5) / cards.length;   // position on arc between 0 and 1
+                let [x, y, r] = f(t, b - a, theta);
+                x += a
+                y -= f(0.5, b - a, theta)[1] / 2;
+                return (
+                    <span key={index} style={{
+                        transform: `translate(${(x - index - 0.5) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad) scale(${scale})`,
+                        transformOrigin: 'center center',
+                    }}>
+                        <Card card={card} onClick={() => onClickCard(card)}></Card>
+                    </span>)
+            })
+        }
+    </div>)
+}
 
 
 export const YourHand: React.FC<{ state: IState, onClickCard: (card: ICard) => void, onChangeName: (name: string) => void }> = ({ state, onClickCard, onChangeName }) => {

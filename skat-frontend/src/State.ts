@@ -8,9 +8,10 @@ interface ICommonPlayerState {
     resign: number,
     you: IPlayerState,
     names: { [player: string]: string },
-    cards: {[player: string]: ICard[]},
+    cards: { [player: string]: ICard[] },
     turn: string,
     yourTurn: boolean
+    singlePlayer?: string,
 }
 
 export interface IPlayerState {
@@ -21,7 +22,10 @@ export interface IPlayerState {
 
 export interface IRunningState extends ICommonPlayerState {
     phase: "running",
-    gamemode: string,
+    gamemode: { kind: "Ramsch" | "Null" | "Grand" } | {
+        kind: "Farbspiel",
+        color: string,
+    },
     currentStich: Stich,
     lastStich: Stich
 }
@@ -57,6 +61,7 @@ export interface IEmptyState extends ICommonPlayerState {
 
 export type IState = IFinishedState | IRunningState | IReizState | ISkatPickingPhase | IGamePickingState | IEmptyState
 
-export const DEBUG_STATE: IState = { phase: "empty", names: {}, you: { "cards": [], "woncards": [], "position": "Vorhand" }, turn: "nobody", resign: 0, cards: {"Geber":[], "Vorhand": [], "Mittelhand": []}, yourTurn: false }
-    // { "yourTurn": false, "gamemode": "Ramsch", "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }
-   // { "yourTurn": true, "reizAnsagerTurn": true, "reizCurrentBid": 18, "phase": "reizen", "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }
+export const DEBUG_STATE: IState =
+    { phase: "empty", names: {}, you: { "cards": [], "woncards": [], "position": "Vorhand" }, turn: "nobody", resign: 0, cards: { "Geber": [], "Vorhand": [], "Mittelhand": [] }, yourTurn: false }
+    // { "yourTurn": false, "gameMode": { kind: "farbspiel", color: "Spades" }, "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0, cards: { "Geber": [], "Vorhand": [], "Mittelhand": [] } }
+    // { "yourTurn": true, "reizAnsagerTurn": true, "reizCurrentBid": 18, "phase": "reizen", "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }

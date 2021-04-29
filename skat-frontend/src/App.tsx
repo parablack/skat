@@ -2,7 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
 import { DEBUG_STATE, ICard, IGamePickingState, IReizState, ISkatPickingPhase, Stich } from './State';
-import { Card } from './Card';
+import { Card, geileDeutschMap, geileFarbenMap, geileMap } from './Card';
 import { YourHand, OpponentHands } from './Hand';
 import { Scoreboard } from './Scoreboard';
 
@@ -146,7 +146,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   }, [ws])
 
   let displayStich: Stich = [];
-  let sieSpielen = "TODO:" + state.phase // "Noch nix"
+  let sieSpielen: string = state.phase
 
   if (state.phase === "reizen") {
     sieSpielen = "Reizen ..."
@@ -156,10 +156,12 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     sieSpielen = "Spiel wählen ..."
   } else if (state.phase === "running") {
     displayStich = state.currentStich.length === 0 ? state.lastStich : state.currentStich;
-    sieSpielen = state.gamemode
+    sieSpielen = state.gamemode.kind
   } else if (state.phase === "finished") {
     displayStich = state.currentStich
     sieSpielen = "Nix mehr, das Spiel ist nämlich vorbei!"
+  } else if (state.phase === "empty") {
+    sieSpielen = "Noch nichts"
   }
 
   return (
@@ -194,11 +196,10 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
             {state.phase === "skatpicking" ? <SkatPickInput ws={ws} state={state} /> : null}
             {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
-            {state.phase === "running" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
-            {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
+            {state.phase === "running" || state.phase === "finished" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
           </div>
 
-
+          {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
 
           <span style={{ margin: '.4em' }}>
             <YourHand state={state} onClickCard={card => {
@@ -227,19 +228,22 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
         }}>
           <header>
             Wilkommen auf der Ramschinsel!
-      <br />
-            <small>Heute spielen Sie: {sieSpielen}</small>
+            <br />
+            <small>
+              {state.phase === 'running' && state.gamemode.kind === "Farbspiel"
+                ? <span>
+                  {!state.singlePlayer || state.singlePlayer === state.you.position
+                    ? <span>Heute spielen Sie:</span>
+                    : <span>Heute spielt {state.names[state.singlePlayer]}:</span>}
+                  {' '}
+                  <span style={{ color: geileFarbenMap[state.gamemode.color] }}>
+                    {geileMap[state.gamemode.color]}
+                  </span>{' '}
+                  {geileDeutschMap[state.gamemode.color]}
+                </span>
+                : <span>Heute spielen Sie: {sieSpielen}</span>}
+            </small>
           </header>
-
-          { /*
-    <div className="nameList">
-    Ihre Mitspieler:
-    <ul>
-      { Object.entries(state.names).map(([pos, val]) =>
-      <li key={pos.toString()}>{pos}: {val}</li>)}
-    </ul>
-    </div>
-      */ }
 
           <div className="resign">
             Nächste Runde ({state.resign} / {Object.entries(state.names).length})
@@ -248,9 +252,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
               Aufgeben
             </button>
           </div>
-
         </div>
-
       </section>
     </div>
   );
