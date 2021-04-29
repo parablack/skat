@@ -15,7 +15,8 @@ import qualified Data.ByteString.Lazy as B
 import Skat
 
 instance ToJSON Card where
-    toJSON (Card name suit)= object ["suit" .= suit, "name" .= name]
+    toJSON (Card name suit) = object ["suit" .= suit, "name" .= name]
+
 instance ToJSON GameMode where
     toJSON = Data.Aeson.String . pack . nicesShow
 
@@ -80,15 +81,31 @@ personalizedSkatState state@GameFinishedState{} player = [
                 "winner" .= winner state
             ]
 
+data CensoredCard = Censored | NotCensored Card
+
+instance ToJSON CensoredCard where
+    toJSON Censored           = object ["suit" .= ("?" :: Text), "name" .= ("?" :: Text)]
+    toJSON (NotCensored card) = toJSON card
+
+censoredCards state =
+    [
+        "geber"      .= censor (playerFromPos state Geber),
+        "vorhand"    .= censor (playerFromPos state Vorhand),
+        "mittelhand" .= censor (playerFromPos state Mittelhand)
+    ]
+    where
+        censor = Data.List.map (\_ -> Censored) . sort . playerCards
+
+
 instance ToJSON SkatStateForPlayer where
     toJSON (SkatStateForPlayer player state names resigning) =
         object $ [
                 "you" .= playerFromPos state player,
                 "names" .= names,
                 "resign" .= resigning
-                ] ++ additionalProperties
-        where additionalProperties = personalizedSkatState state player
-
+                ]
+                ++ personalizedSkatState state player
+                ++ censoredCards state
 
 
 instance FromJSON Card where
