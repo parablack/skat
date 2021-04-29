@@ -24,4 +24,5 @@ executable skat-exe
     , websockets
     , random
     , array
+    , transformers
   default-language: Haskell2010

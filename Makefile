@@ -22,6 +22,6 @@ frontend: skat-frontend/src/*.tsx
 deploy: all frontend
 	scp *.hs bpara:/var/www/skat/
 	scp Skat.cabal bpara:/var/www/skat/
-	scp -r skat-frontend/build bpara:/var/www/skat/frontend
+	scp -r skat-frontend/build/* bpara:/var/www/skat/frontend/
 	ssh -f bpara 'systemctl restart skat'
 	# cabal install --only-dependencies

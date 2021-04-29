@@ -5,7 +5,7 @@ import Control.Monad.Except
 import Data.List
 import qualified Data.Map
 import Definitions
-import Ramsch
+import Gamemodes
 import Util
 
 {- ======== player util functions =============== -}
@@ -55,6 +55,12 @@ playersFromDeck deck = [Player Geber (slice 0 9 deck) [],
 
 gameModeFromString :: String -> GameMode
 gameModeFromString "Ramsch" = mRamsch
+gameModeFromString "Null" = mNull
+gameModeFromString "Grand" = mGrand
+gameModeFromString "ColorHearts" = mColor Hearts
+gameModeFromString "ColorSpades" = mColor Spades
+gameModeFromString "ColorDiamonds" = mColor Diamonds
+gameModeFromString "ColorClubs" = mColor Clubs
 
 skatFromDeck :: [Card] -> [Card]
 skatFromDeck deck = slice 30 31 deck
@@ -116,7 +122,7 @@ checkGameEnd :: SkatState -> SkatState
 checkGameEnd state = if hasGameEnded state then
     let scoresTuple = map (\x -> (playerPosition x, scoreForPlayer x)) $ players state
         scores = foldl (\ls (player, score) -> Data.Map.insert player score ls) Data.Map.empty scoresTuple
-        winner = determineGameWinner (gameMode state) scores
+        winner = determineGameWinner (gameMode state) (singlePlayer state) scores
      in
     GameFinishedState {
         players = players state,
@@ -216,7 +222,11 @@ play state@SkatPickingPhase{singlePlayer=Just singlePlayer} pos (PlayCard card) 
     }
     case playerAmountCards - 1 of
         11 -> return newState
-        10 -> return newState -- TODO
+        10 -> return GamePickingPhase {
+            players = players state,
+            reizCurrentBid = reizCurrentBid state,
+            singlePlayer = Just singlePlayer
+        }
         _  -> error "I am in SkatPicking state, but theres no Skat to Discard."
 
 play state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player (ReizBid val) = do
@@ -250,10 +260,21 @@ play stateOrig@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=False} player
         True -> state
         False -> case machine of
                 VorhandNix -> error "Answer to VorhandNix, this should never happen"
-                MittelhandVorhand -> state { reizStateMachine = MittelhandGeber }
+                MittelhandVorhand -> stateOrig { reizStateMachine = MittelhandGeber }
                 MittelhandGeber -> skatPickingFromReiz state Mittelhand
                 GeberVorhand -> skatPickingFromReiz state Geber
 
 play ReizPhase{} _ _ = throwError "pattern in reizAntwort does not match."
+
+play state@GamePickingPhase{} player (PlayVariant var) = do
+    assert (reizTurn state == Just player) "Du bist nicht dran mit Spiel auswählen!"
+    return $ RunningPhase {
+        players = players state,
+        singlePlayer = singlePlayer state,
+        currentStich = [],
+        playedStiche = [],
+        turn = Vorhand,
+        gameMode = var
+    }
 
 play _ _ _ = throwError "You are currently not allowed to make this move."

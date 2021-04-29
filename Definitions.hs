@@ -73,7 +73,8 @@ data GameMode = GameMode {
     -- compare the two cards,
     cardSmaller :: Card -> Card -> Bool,
     scoreMultiplier :: Int,
-    determineGameWinner :: Map PlayerPosition Int -> PlayerPosition,
+    -- single player, scores, winner
+    determineGameWinner :: Maybe PlayerPosition -> (Map PlayerPosition Int) -> [PlayerPosition],
     nicesShow :: String
 }
 instance (Show GameMode) where
@@ -101,6 +102,11 @@ data SkatState =
         reizCurrentBid :: Int,
         singlePlayer :: Maybe PlayerPosition
     } |
+    GamePickingPhase {
+        players :: [Player],
+        reizCurrentBid :: Int,
+        singlePlayer :: Maybe PlayerPosition
+    } |
     RunningPhase {
         players :: [Player],
         singlePlayer :: Maybe PlayerPosition,
@@ -113,7 +119,7 @@ data SkatState =
         players :: [Player],
         lastStich :: Stich,
         scores :: Map PlayerPosition Int,
-        winner :: PlayerPosition
+        winner :: [PlayerPosition]
     }
     deriving (Eq, Show)
 
