@@ -18,9 +18,10 @@ import Util
 
 
 data ClientData = ClientData
-  { dataName     :: String,
-    dataRole     :: PlayerPosition,
-    dataResigned :: Bool
+  { dataName      :: String,
+    dataRole      :: PlayerPosition,
+    dataResigned  :: Bool,
+    dataShowCards :: Bool
   }
 
 data ServerData = ServerData
@@ -45,7 +46,10 @@ newGame = do
     )
   clients <- getClients
   forM_ clients (\client ->
-      modifyClient client (\record -> record {dataResigned = False})
+    modifyClient client (\record -> record {
+        dataResigned = False,
+        dataShowCards = False}
+        )
     )
 
 replyError :: MonadIO m => Client -> String -> m ()
@@ -109,19 +113,22 @@ handlePlayerAction client Resign = do
   numPlayer <- List.length <$> getClients
   when (numResigned >= numPlayer) newGame
 
-handlePlayerAction _ _ = throwError "Not implemented yet!"
+handlePlayerAction client ShowCards = do
+  modifyClient client (\record -> record {dataShowCards = True})
 
--- TODO: PlayVariant GameMode | ShowCards | DiscardSkat Card Card
 
 broadcastState :: ServerState ()
 broadcastState = do
   clients <- Map.assocs . dataClients <$> get
   skatState <- dataSkatState <$> get
   numResigned <- countResigned
+  showingCards <- List.map dataRole . List.filter dataShowCards <$> getClientRecords
   forM_ clients ( \(client, record) -> do
       let player = dataRole record
       namemap <- joinPositionName
-      reply client (encode (SkatStateForPlayer player skatState namemap numResigned))
+      reply client (encode
+        (SkatStateForPlayer player skatState namemap numResigned showingCards)
+        )
     )
 
 handleEvent :: Event -> ServerState ()
@@ -130,9 +137,10 @@ handleEvent (Connect client) = do
   assignedPositions <- List.map dataRole <$> getClientRecords
   let clientPos = List.head $ [Geber, Vorhand, Mittelhand] List.\\ assignedPositions
   addClient client ClientData {
-      dataName     = "Anon",
-      dataRole     = clientPos,
-      dataResigned = False
+      dataName      = "Anon",
+      dataRole      = clientPos,
+      dataResigned  = False,
+      dataShowCards = False
     }
   broadcastState
 

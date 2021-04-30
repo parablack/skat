@@ -243,7 +243,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
 
           <div>
             Name ändern <br/>
-              <button onClick={(_) => {
+              <button className="unicode-button" onClick={(_) => {
                   let name = prompt("Enter your name")
                   if (name) {
                       ws.send(JSON.stringify({
@@ -253,22 +253,22 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                         localStorage.setItem("nickname", name)
                       }
                   }
-              }>Ändern</button>
+              }>&#x1F589;</button>
           </div>
 
           <div>
             Mit offenen Karten spielen
             <br />
-            <button onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>
-              Zeigen
+            <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>
+              &#x1F440;
             </button>
           </div>
 
           <div className="resign">
             Nächste Runde ({state.resign} / {Object.entries(state.names).length})
             <br />
-            <button onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
-              Aufgeben
+            <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
+              &#x1F1EB;&#x1F1F7;
             </button>
           </div>
         </div>
