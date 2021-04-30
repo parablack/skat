@@ -192,7 +192,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
           </span>
 
           <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin', display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-            {state.phase === "empty" ? <h1>Server ist down :(</h1> : null}
+            {state.phase === "empty" ? <h1>Server ist down <button className="unicode-button" onClick={() => window.location.reload()}>&#x1F62D;</button></h1> : null}
             {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
             {state.phase === "skatpicking" ? <SkatPickInput ws={ws} state={state} /> : null}
             {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
@@ -253,7 +253,8 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                         localStorage.setItem("nickname", name)
                       }
                   }
-              }>&#x1F589;</button>
+              }>&#x270F;&#xFE0F;
+              </button>
           </div>
 
           <div>

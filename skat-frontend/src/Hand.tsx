@@ -74,7 +74,7 @@ function f(t: number, b: number, theta: number) {
 
 interface IHandProps {
     cards: ICard[],
-    onClickCard: (card: ICard) => void,
+    onClickCard?: (card: ICard) => void,
     theta: number,
     overlap: number,
     scale: number
@@ -100,8 +100,9 @@ const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale 
                     <span key={index} style={{
                         transform: `translate(${(x - index - 0.5) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad) scale(${scale})`,
                         transformOrigin: 'center center',
+                        cursor: onClickCard ? "pointer" : "default",
                     }}>
-                        <Card card={card} onClick={() => onClickCard(card)}></Card>
+                        <Card card={card} onClick={() => {if (onClickCard) {onClickCard(card)}}}></Card>
                     </span>)
             })
         }
@@ -183,7 +184,6 @@ export const OpponentHands: React.FC<{ state: IState }> = ({ state }) => {
         }}>
             {<Hand
                 cards={right.cards}
-                onClickCard={() => { }}
                 theta={27 * Math.PI / 180}
                 overlap={0.4}
                 scale={0.55}
