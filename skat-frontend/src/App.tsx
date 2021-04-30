@@ -41,6 +41,7 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
       <div>
         Du darfst
         <br />
+        <div style={{display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center"}}>
         <input ref={textInput}
           style={{ textAlign: "center" }}
           type="number"
@@ -49,18 +50,20 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
           size={5}
           defaultValue={state.reizCurrentBid + 1}
         />
-        <button onClick={() => {
+        <button className="unicode-button" onClick={() => {
           ws.send(JSON.stringify({
             action: "reizbid",
             reizbid: parseInt(textInput!.current!.value),
           }))
-        }}>bieten</button>
-                oder
-        <button onClick={() => {
+
+      }}>&#x1F4C8;</button>
+        oder
+        <button className="unicode-button" onClick={() => {
           ws.send(JSON.stringify({
             action: "reizweg",
           }))
-        }}>WEG!</button>
+        }}>&#x1F6AA;</button>
+        </div>
       </div>
     )
   } else {
@@ -68,17 +71,19 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
       <div>
         Es wurde {state.reizCurrentBid} geboten:
         <br />
-        <button onClick={() => {
+        <div style={{display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center"}}>
+        <button className="unicode-button" onClick={() => {
           ws.send(JSON.stringify({
             action: "reizanswer", value: true
           }))
-        }}>Ja</button>
+      }}>&#x1F44D;</button>
                 oder
-        <button onClick={() => {
+        <button className="unicode-button" onClick={() => {
           ws.send(JSON.stringify({
             action: "reizanswer", value: false
           }))
-        }}>Nein</button>
+      }}>&#x1F44E;</button>
+      </div>
       </div>
     )
   }
