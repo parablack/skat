@@ -129,7 +129,8 @@ data SkatStateForPlayer = SkatStateForPlayer {
     position :: PlayerPosition,
     playerSkatState :: SkatState,
     playerNames :: Map String String,
-    resigningPlayers :: Int
+    resigningPlayers :: Int,
+    showingCards :: [PlayerPosition]
 }
 
 -- XY: X sagt, Y hört

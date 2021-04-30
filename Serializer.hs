@@ -84,23 +84,29 @@ instance ToJSON CensoredCard where
     toJSON Censored           = object ["suit" .= ("?" :: Text), "name" .= ("?" :: Text)]
     toJSON (NotCensored card) = toJSON card
 
-censoredCards state =
+censoredCards state showingCards =
     object $ [
-        "Geber"      .= censor (playerFromPos state Geber),
-        "Vorhand"    .= censor (playerFromPos state Vorhand),
-        "Mittelhand" .= censor (playerFromPos state Mittelhand)
+        "Geber"      .= censor Geber,
+        "Vorhand"    .= censor Vorhand,
+        "Mittelhand" .= censor Mittelhand
     ]
-    where
-        censor = Data.List.map (\_ -> Censored) . sort . playerCards
-
+  where
+      censor position =
+          let player = playerFromPos state position
+              cards = sort $ playerCards player
+          in Data.List.map (\card ->
+                if position `elem` showingCards
+                    then NotCensored card
+                    else Censored
+            ) cards
 
 instance ToJSON SkatStateForPlayer where
-    toJSON (SkatStateForPlayer player state names resigning) =
+    toJSON (SkatStateForPlayer player state names resigning showingCards) =
         object $ [
                 "you" .= playerFromPos state player,
                 "names" .= names,
                 "resign" .= resigning,
-                "cards" .= censoredCards state
+                "cards" .= censoredCards state showingCards
                 ]
                 ++ personalizedSkatState state player
 

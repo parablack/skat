@@ -109,7 +109,7 @@ const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale 
 }
 
 
-export const YourHand: React.FC<{ state: IState, onClickCard: (card: ICard) => void, onChangeName: (name: string) => void }> = ({ state, onClickCard, onChangeName }) => {
+export const YourHand: React.FC<{ state: IState, onClickCard: (card: ICard) => void}> = ({ state, onClickCard }) => {
     let cards = state.you.cards;
     let you = createPlayerStruct(state, state.you.position);
 
@@ -125,12 +125,6 @@ export const YourHand: React.FC<{ state: IState, onClickCard: (card: ICard) => v
             color: you.active ? "red" : "white"
         }}>
             <div>{you.name}</div>
-            <button onClick={(_) => {
-                let name = prompt("Enter your name")
-                if (name) {
-                    onChangeName(name);
-                }
-            }}>Change Name</button>
             <div><small>{you.position}</small></div>
         </div>
     </div>
@@ -171,7 +165,7 @@ export const OpponentHands: React.FC<{ state: IState }> = ({ state }) => {
             position: "absolute",
             left: "0",
             transformOrigin: "center center",
-            transform: `translate(0%, 15%) rotate(${180 - 33}deg)`,
+            transform: `translate(-15%, 15%) rotate(${180 - 20}deg)`,
         }}>
             {<Hand
                 cards={left.cards}
@@ -185,7 +179,7 @@ export const OpponentHands: React.FC<{ state: IState }> = ({ state }) => {
             position: "absolute",
             right: "0",
             transformOrigin: "center center",
-            transform: `translate(0%, 15%) rotate(${180 + 33}deg)`,
+            transform: `translate(15%, 15%) rotate(${180 + 20}deg)`,
         }}>
             {<Hand
                 cards={right.cards}

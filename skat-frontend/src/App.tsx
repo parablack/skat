@@ -45,7 +45,7 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
           style={{ textAlign: "center" }}
           type="number"
           min={state.reizCurrentBid}
-          max="100"
+          max="264"
           size={5}
           defaultValue={state.reizCurrentBid + 1}
         />
@@ -208,13 +208,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                 action: "playcard",
                 card,
               }))
-            }} onChangeName={name => {
-              ws.send(JSON.stringify({
-                action: "setname",
-                name
-              }))
-              localStorage.setItem("nickname", name)
-            }} />
+          }} />
           </span>
 
         </div>
@@ -246,6 +240,29 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                 : <span>Heute spielen Sie: {sieSpielen}</span>}
             </small>
           </header>
+
+          <div>
+            Name ändern <br/>
+              <button onClick={(_) => {
+                  let name = prompt("Enter your name")
+                  if (name) {
+                      ws.send(JSON.stringify({
+                          action: "setname",
+                          name
+                        }))
+                        localStorage.setItem("nickname", name)
+                      }
+                  }
+              }>Ändern</button>
+          </div>
+
+          <div>
+            Mit offenen Karten spielen
+            <br />
+            <button onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>
+              Zeigen
+            </button>
+          </div>
 
           <div className="resign">
             Nächste Runde ({state.resign} / {Object.entries(state.names).length})
