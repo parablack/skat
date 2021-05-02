@@ -44,6 +44,9 @@ export interface IReizState extends ICommonPlayerState {
     resign: number
 }
 
+export interface IHandPickingPhase extends ICommonPlayerState {
+    phase: "handpicking",
+}
 
 export interface ISkatPickingPhase extends ICommonPlayerState {
     phase: "skatpicking",
@@ -59,9 +62,9 @@ export interface IEmptyState extends ICommonPlayerState {
     phase: "empty"
 }
 
-export type IState = IFinishedState | IRunningState | IReizState | ISkatPickingPhase | IGamePickingState | IEmptyState
+export type IState = IFinishedState | IRunningState | IReizState | IHandPickingPhase | ISkatPickingPhase | IGamePickingState | IEmptyState
 
-export const DEBUG_STATE: IState =
+export const EMPTY_STATE: IState =
     { phase: "empty", names: {}, you: { "cards": [], "woncards": [], "position": "Vorhand" }, turn: "nobody", resign: 0, cards: { "Geber": [], "Vorhand": [], "Mittelhand": [] }, yourTurn: false }
     // { "yourTurn": false, "gameMode": { kind: "farbspiel", color: "Spades" }, "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0, cards: { "Geber": [], "Vorhand": [], "Mittelhand": [] } }
     // { "yourTurn": true, "reizAnsagerTurn": true, "reizCurrentBid": 18, "phase": "reizen", "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }

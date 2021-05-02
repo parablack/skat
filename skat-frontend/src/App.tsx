@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
-import { DEBUG_STATE, ICard, IGamePickingState, IReizState, ISkatPickingPhase, Stich } from './State';
+import { EMPTY_STATE, ICard, IGamePickingState, IHandPickingPhase, IReizState, ISkatPickingPhase, Stich } from './State';
 import { Card, geileDeutschMap, geileFarbenMap, geileMap } from './Card';
 import { YourHand, OpponentHands } from './Hand';
 import { Scoreboard } from './Scoreboard';
@@ -41,28 +41,28 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
       <div>
         Du darfst
         <br />
-        <div style={{display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center"}}>
-        <input ref={textInput}
-          style={{ textAlign: "center" }}
-          type="number"
-          min={state.reizCurrentBid}
-          max="264"
-          size={5}
-          defaultValue={state.reizCurrentBid + 1}
-        />
-        <button className="unicode-button" onClick={() => {
-          ws.send(JSON.stringify({
-            action: "reizbid",
-            reizbid: parseInt(textInput!.current!.value),
-          }))
+        <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
+          <input ref={textInput}
+            style={{ textAlign: "center" }}
+            type="number"
+            min={state.reizCurrentBid}
+            max="264"
+            size={5}
+            defaultValue={state.reizCurrentBid + 1}
+          />
+          <button className="unicode-button" onClick={() => {
+            ws.send(JSON.stringify({
+              action: "reizbid",
+              reizbid: parseInt(textInput!.current!.value),
+            }))
 
-      }}>&#x1F4C8;</button>
+          }}>&#x1F4C8;</button>
         oder
         <button className="unicode-button" onClick={() => {
-          ws.send(JSON.stringify({
-            action: "reizweg",
-          }))
-        }}>&#x1F6AA;</button>
+            ws.send(JSON.stringify({
+              action: "reizweg",
+            }))
+          }}>&#x1F6AA;</button>
         </div>
       </div>
     )
@@ -71,27 +71,51 @@ const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }
       <div>
         Es wurde {state.reizCurrentBid} geboten:
         <br />
-        <div style={{display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center"}}>
-        <button className="unicode-button" onClick={() => {
-          ws.send(JSON.stringify({
-            action: "reizanswer", value: true
-          }))
-      }}>&#x1F44D;</button>
+        <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
+          <button className="unicode-button" onClick={() => {
+            ws.send(JSON.stringify({
+              action: "reizanswer", value: true
+            }))
+          }}>&#x1F44D;</button>
                 oder
         <button className="unicode-button" onClick={() => {
-          ws.send(JSON.stringify({
-            action: "reizanswer", value: false
-          }))
-      }}>&#x1F44E;</button>
-      </div>
+            ws.send(JSON.stringify({
+              action: "reizanswer", value: false
+            }))
+          }}>&#x1F44E;</button>
+        </div>
       </div>
     )
   }
 }
 
 
+const HandPickInput: React.FC<{ ws: WebSocket, state: IHandPickingPhase }> = ({ ws, state }) => {
+  if (!state.yourTurn)
+    return <h1>{state.names[state.turn]} wählt Hand/nicht Hand ...</h1>
+
+  return (
+    <div>
+      <button onClick={() => {
+        ws.send(JSON.stringify({
+          action: "playhand",
+          hand: true,
+        }))
+      }}>Hand Spielen</button>
+      {" oder "}
+      <button onClick={() => {
+        ws.send(JSON.stringify({
+          action: "playhand",
+          hand: false,
+        }))
+      }}>Hand nicht Spielen</button>
+    </div>
+  )
+}
+
 const GamePickInput: React.FC<{ ws: WebSocket, state: IGamePickingState }> = ({ ws, state }) => {
   let dropdown = React.useRef<HTMLSelectElement>(null);
+  let dropdown2 = React.useRef<HTMLSelectElement>(null);
 
   if (!state.yourTurn)
     return <h1>{state.names[state.turn]} wählt das Spiel ...</h1>
@@ -108,10 +132,17 @@ const GamePickInput: React.FC<{ ws: WebSocket, state: IGamePickingState }> = ({ 
         <option value="Null">Null</option>
         <option value="Grand">Grand</option>
       </select>
+      <select ref={dropdown2} defaultValue="Normal">
+        <option value="Normal">Normal</option>
+        <option value="Schneider">Schneider</option>
+        <option value="Schwarz">Schwarz</option>
+        <option value="Ouvert">Ouvert</option>
+      </select>
       <button onClick={() => {
         ws.send(JSON.stringify({
           action: "playvariant",
           variant: dropdown!.current!.value,
+          angesagt: dropdown2!.current!.value,
         }))
       }}>Spielen</button>
     </div>
@@ -129,7 +160,7 @@ const SkatPickInput: React.FC<{ ws: WebSocket, state: ISkatPickingPhase }> = ({ 
 }
 
 export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
-  const [state, setState] = useState(DEBUG_STATE) /* TODO: remove DEBUG_STATE */
+  const [state, setState] = useState(EMPTY_STATE)
   // const [nickname, setNickname] = useState(undefined)
 
   let resolveNickname = (pos: string) => state.names[pos] || pos
@@ -199,6 +230,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
           <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin', display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
             {state.phase === "empty" ? <h1>Server ist down <button className="unicode-button" onClick={() => window.location.reload()}>&#x1F62D;</button></h1> : null}
             {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
+            {state.phase === "handpicking" ? <HandPickInput ws={ws} state={state} /> : null}
             {state.phase === "skatpicking" ? <SkatPickInput ws={ws} state={state} /> : null}
             {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
             {state.phase === "running" || state.phase === "finished" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
@@ -213,7 +245,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                 action: "playcard",
                 card,
               }))
-          }} />
+            }} />
           </span>
 
         </div>
@@ -247,18 +279,18 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
           </header>
 
           <div>
-            Name ändern <br/>
-              <button className="unicode-button" onClick={(_) => {
-                  let name = prompt("Enter your name")
-                  if (name) {
-                      ws.send(JSON.stringify({
-                          action: "setname",
-                          name
-                        }))
-                        localStorage.setItem("nickname", name)
-                      }
-                  }
-              }>&#x270F;&#xFE0F;
+            Name ändern <br />
+            <button className="unicode-button" onClick={(_) => {
+              let name = prompt("Enter your name")
+              if (name) {
+                ws.send(JSON.stringify({
+                  action: "setname",
+                  name
+                }))
+                localStorage.setItem("nickname", name)
+              }
+            }
+            }>&#x270F;&#xFE0F;
               </button>
           </div>
 
