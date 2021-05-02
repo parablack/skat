@@ -7,6 +7,8 @@ module Definitions(Suit(..), Name(..), Card(..), Player(..),
      PlayerPosition(..), SkatState(..), SkatStateForPlayer(..), ReceivePacket(..),
      ReizStateMachine(..),
      SkatMove(..),
+     SkatScoringInformation(..),
+     SkatGewinnstufe(..),
      deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn) where
 
 import Data.Maybe
@@ -59,7 +61,8 @@ deck = [Card name suit | name <- names, suit <- suits]
 data Player = Player {
     playerPosition :: PlayerPosition,
     playerCards :: [Card],
-    wonCards :: [Card]
+    wonCards :: [Card],
+    showsCards :: Bool
 } deriving (Eq, Show)
 
 type Stich = [(Card, PlayerPosition)]
@@ -74,9 +77,9 @@ data GameMode = GameMode {
     cardsCompatible :: Card -> Card -> Bool,
     -- compare the two cards,
     cardSmaller :: Card -> Card -> Bool,
-    scoreMultiplier :: Int,
-    -- single player, scores, winner
-    determineGameWinner :: Maybe PlayerPosition -> (Map PlayerPosition Int) -> [PlayerPosition],
+    -- single player, scores, (person, hasWon?)
+    determineGameWinner :: Maybe PlayerPosition -> SkatScoringInformation -> (Map PlayerPosition [Card]) -> (PlayerPosition, Bool),
+    gameValue :: SkatScoringInformation -> Int,
     nicesShow :: GameModeMeta
 }
 instance (Show GameMode) where
@@ -84,6 +87,14 @@ instance (Show GameMode) where
 instance (Eq GameMode) where
     (==) x y = nicesShow x == nicesShow y
 
+data SkatScoringInformation = SkatScoringInformation {
+    isHand :: Bool,
+    angesagteStufe :: SkatGewinnstufe,
+    reizHighestBid :: Int,
+    initialCards :: [Card]
+} | SkatNoScoring deriving (Eq, Show)
+
+data SkatGewinnstufe = Normal | Schneider | Schwarz | Ouvert deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
 data PlayerPosition = Geber | Vorhand | Mittelhand deriving (Eq, Show, Ord, Generic, FromJSON, ToJSON, ToJSONKey)
 nextPos :: PlayerPosition -> PlayerPosition
@@ -99,6 +110,12 @@ data SkatState =
         reizAnsagerTurn :: Bool,
         reizCurrentBid :: Int
     } |
+    HandPickingPhase {
+        players :: [Player],
+        skat :: [Card],
+        reizCurrentBid :: Int,
+        singlePlayer :: Maybe PlayerPosition
+    } |
     SkatPickingPhase {
         players :: [Player],
         reizCurrentBid :: Int,
@@ -107,6 +124,7 @@ data SkatState =
     GamePickingPhase {
         players :: [Player],
         reizCurrentBid :: Int,
+        isHandSpiel :: Bool,
         singlePlayer :: Maybe PlayerPosition
     } |
     RunningPhase {
@@ -115,13 +133,15 @@ data SkatState =
         gameMode :: GameMode,
         currentStich :: Stich,
         playedStiche :: [Stich],
-        turn :: PlayerPosition
+        turn :: PlayerPosition,
+        skatScoringInformation :: SkatScoringInformation
     } |
     GameFinishedState {
         players :: [Player],
         lastStich :: Stich,
         scores :: Map PlayerPosition Int,
-        winner :: [PlayerPosition]
+        result :: (PlayerPosition, Bool, Int),
+        skatScoringInformation :: SkatScoringInformation
     }
     deriving (Eq, Show)
 
@@ -153,10 +173,11 @@ reizTurn ReizPhase{reizAnsagerTurn=True, reizStateMachine=machine} = return $ ac
 
 data SkatMove
     = PlayCard Card
-    | PlayVariant GameMode
+    | PlayVariant GameMode SkatGewinnstufe
     | DiscardSkat Card Card
     | ReizBid Reizwert
     | ReizAnswer Bool
+    | PlayHand Bool
     deriving (Show, Eq)
 
 data ReceivePacket

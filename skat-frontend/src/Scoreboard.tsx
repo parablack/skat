@@ -4,10 +4,13 @@ export const Scoreboard: React.FC<{ state: IFinishedState }> = ({ state }) => {
 
     let sum = Object.values(state.scores).reduce((x, y) => x + y, 0)
 
-    let namenWin = (state.winner.map(x => state.names[x])).join(" und ")
+    let resultName = state.names[state.result[0]] || "Alarm?"
+    let resultWon = state.result[1];
+    let resultPoints = state.result[2];
 
     return <div>
-        {namenWin} {state.winner.length === 1 ? <>hat</> : <>haben</>} gewonnen!
+        {resultName} hat {resultWon ? <>gewonnen</> : <>verloren 😢</>}!
+        <br /> Dies gibt {resultPoints} Punkte!
         <table>
             <tbody>
                 {

@@ -20,8 +20,7 @@ import Util
 data ClientData = ClientData
   { dataName      :: String,
     dataRole      :: PlayerPosition,
-    dataResigned  :: Bool,
-    dataShowCards :: Bool
+    dataResigned  :: Bool
   }
 
 data ServerData = ServerData
@@ -47,8 +46,8 @@ newGame = do
   clients <- getClients
   forM_ clients (\client ->
     modifyClient client (\record -> record {
-        dataResigned = False,
-        dataShowCards = False}
+        dataResigned = False
+        }
         )
     )
 
@@ -114,7 +113,11 @@ handlePlayerAction client Resign = do
   when (numResigned >= numPlayer) newGame
 
 handlePlayerAction client ShowCards = do
-  modifyClient client (\record -> record {dataShowCards = True})
+  record <- maybeToExceptT "Not connected!" $ lookupClient client
+  skatState <- dataSkatState <$> get
+  let newState = showCards skatState (dataRole record)
+  modify (\state -> state {dataSkatState = newState})
+
 
 
 broadcastState :: ServerState ()
@@ -122,7 +125,7 @@ broadcastState = do
   clients <- Map.assocs . dataClients <$> get
   skatState <- dataSkatState <$> get
   numResigned <- countResigned
-  showingCards <- List.map dataRole . List.filter dataShowCards <$> getClientRecords
+  let showingCards = List.map playerPosition $ List.filter showsCards (players skatState)
   forM_ clients ( \(client, record) -> do
       let player = dataRole record
       namemap <- joinPositionName
@@ -139,8 +142,7 @@ handleEvent (Connect client) = do
   addClient client ClientData {
       dataName      = "Anon",
       dataRole      = clientPos,
-      dataResigned  = False,
-      dataShowCards = False
+      dataResigned  = False
     }
   broadcastState
 

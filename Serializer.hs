@@ -22,6 +22,10 @@ instance ToJSON GameMode where
                      "color" .= snd meta ]
                 where meta = nicesShow gm
 
+instance ToJSON SkatScoringInformation where
+    toJSON info = object ["hand" .= isHand info,
+                     "angesagt" .= angesagteStufe info ]
+
 
 
 instance ToJSON Player where
@@ -56,10 +60,17 @@ personalizedSkatState state@GamePickingPhase{} player = [
                     Nothing -> error "Unreachable state: Nobody's turn (no single player in skat picking)"
                     Just x -> x)
             ]
-
+personalizedSkatState state@HandPickingPhase{} player = [
+                "phase" .= pack "handpicking",
+                "yourTurn" .= (singlePlayer state == Just player),
+                "turn" .= (case singlePlayer state of
+                    Nothing -> error "Unreachable state: Nobody's turn (no single player in hand picking)"
+                    Just x -> x)
+            ]
 personalizedSkatState state@RunningPhase{} player = [
                 "phase" .= pack "running",
                 "gamemode" .= gameMode state,
+                "scoring" .= skatScoringInformation state,
                 "currentStich" .= Data.List.reverse (currentStich state),
                 "lastStich" .= case playedStiche state of
                     [] -> []
@@ -75,7 +86,7 @@ personalizedSkatState state@GameFinishedState{} player = [
                 "currentStich" .= Data.List.reverse (lastStich state),
                 "yourTurn" .= False,
                 "scores" .= Data.Map.mapKeys show (scores state),
-                "winner" .= winner state
+                "result" .= result state
             ]
 
 data CensoredCard = Censored | NotCensored Card
@@ -132,12 +143,13 @@ instance FromJSON ReceivePacket where
             "showcards"   -> return ShowCards
             "playcard"    -> MakeMove . PlayCard <$> (obj .: "card" :: Parser Card)
             "setname"     -> SetName  <$> (obj .: "name" :: Parser String)
-            "playvariant" -> MakeMove . PlayVariant <$> (obj .: "variant" :: Parser GameMode)
+            "playvariant" -> MakeMove <$> (PlayVariant <$> (obj .: "variant" :: Parser GameMode) <*> (obj .: "angesagt" :: Parser SkatGewinnstufe))
             "discardskat" -> MakeMove <$> (DiscardSkat <$> (obj .: "card1") <*>  (obj .: "card2"))
             "resign"      -> return Resign
             "reizbid"     -> (MakeMove . ReizBid . Reizwert) <$> (obj .: "reizbid" :: Parser Int)
             "reizweg"     -> return . MakeMove $ ReizBid Weg
             "reizanswer"  -> MakeMove . ReizAnswer <$> (obj .: "value" :: Parser Bool)
+            "playhand"    -> MakeMove . PlayHand <$> (obj .: "hand" :: Parser Bool)
             _             -> parseFail "Action unspecified."
 
     parseJSON _ = parseFail "Got no object."

@@ -7,30 +7,68 @@ import Data.Ord
 import Data.Maybe
 
 
-simpleWinner :: Map PlayerPosition Int -> PlayerPosition
-simpleWinner = fst . maximumBy (comparing snd) . assocs
+sumCards :: [Card] -> Int
+sumCards = sum . Data.List.map (\(Card name _) -> nameValue name)
 
--- single player
-simpleTeamWinner :: PlayerPosition -> Map PlayerPosition Int -> [PlayerPosition]
-simpleTeamWinner singlePlayer scores
-    | (scores ! singlePlayer) > 60 = [singlePlayer]
-    | otherwise                    = [Vorhand, Geber, Mittelhand] Data.List.\\ [singlePlayer]
+simpleWinner :: Map PlayerPosition [Card] -> PlayerPosition
+simpleWinner = fst . maximumBy (comparing (sumCards . snd)) . assocs
+
+-- meine stiche
+scoreSufficient :: SkatGewinnstufe -> [Card] -> Bool
+scoreSufficient angesagt cards
+    | angesagt == Normal    && (sumCards cards)  > 60   = True
+    | angesagt == Schneider && (sumCards cards) >= 90  = True
+    | angesagt == Schwarz   && (length   cards) == 32  = True
+    | angesagt == Ouvert    && (length   cards) == 32  = True
+    | otherwise                                        = False
+
+singlePlayerHasWon :: PlayerPosition -> SkatScoringInformation -> Map PlayerPosition [Card] -> Bool
+singlePlayerHasWon pos info@SkatScoringInformation{angesagteStufe=stufe} cards = scoreSufficient stufe (cards ! pos)
 
 
 mRamsch = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
-    scoreMultiplier = 1,
-    determineGameWinner = \_ -> (return . simpleWinner),
+    gameValue = const 1,
+    determineGameWinner = \_ _ scores -> (simpleWinner scores, False),
     nicesShow = ("Ramsch", "")
 }
+
+-- spitzen, sorted. actual cards. count, present?
+countSpitzen :: [Card] -> [Card] -> (Int, Bool)
+countSpitzen []     _     = (0, False)
+countSpitzen (x:xs) cards
+    | (x `elem` cards) == nextPresent = (1 + nextCnt, x `elem` cards)
+    | otherwise                       = (1, x `elem` cards)
+    where otherSpitzen = countSpitzen xs cards
+          nextPresent  = snd otherSpitzen
+          nextCnt      = fst otherSpitzen
+
+bubenSpitzen = reverse $ sort [(Card Jack suit) | suit <- suits]
+farbSpitzen :: Suit -> [Card]
+farbSpitzen suit = bubenSpitzen ++ (reverse $ sort [(Card kind suit) | kind <- names, kind /= Jack])
+
+-- spitzen, info, value
+factorGameValue :: [Card] -> SkatScoringInformation -> Int
+factorGameValue spitzen SkatScoringInformation{initialCards = cards} = fst $ countSpitzen spitzen cards
+
+-- angesagt, score of single player
+factorGewinnstufe :: SkatScoringInformation -> [Card] -> Int
+factorGewinnstufe state@SkatScoringInformation{angesagteStufe=stufe} myCards
+    | stufe == Ouvert                    = 6 + handBonus -- ouvert
+    | stufe == Schwarz                   = 5 + handBonus -- schwarz angesagt
+    | stufe == Schneider                 = 4 + handBonus -- schneider angesagt
+    | length myCards == 32               = 3 + handBonus -- schwarz
+    | sumCards myCards >= 90             = 2 + handBonus -- schneider
+    | stufe == Normal                    = 1 + handBonus -- normal
+    where handBonus = if isHand state then 1 else 0
 
 mGrand = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
-    scoreMultiplier = 24,
-    determineGameWinner = \x -> case x of
-                                Just player -> simpleTeamWinner player
+    gameValue = const 24, -- TODO
+    determineGameWinner = \x info cards -> case x of
+                                Just player -> (player, singlePlayerHasWon player info cards)
                                 _ -> error "Grand but nobody played??",
     nicesShow = ("Grand", "")
 }
@@ -59,9 +97,9 @@ mColor :: Suit -> GameMode
 mColor color = GameMode {
     cardsCompatible = farbCompatible color,
     cardSmaller = farbCardLE color,
-    scoreMultiplier = suitValue color,
-    determineGameWinner = \x -> case x of
-                                Just player -> simpleTeamWinner player
+    gameValue = const (suitValue color), -- TODO
+    determineGameWinner = \x info cards -> case x of
+                                Just player -> (player, singlePlayerHasWon player info cards)
                                 _ -> error "Farb but nobody played??",
     nicesShow = ("Farbspiel", (show color))
 }
@@ -75,24 +113,22 @@ nullCardLE (Card x suit) (Card y suit')
     | suit == suit' = fromJust (elemIndex x nullOrdering) <= fromJust (elemIndex y nullOrdering)
     | otherwise     = False
 
--- TODO Stiche vs. Punkte
-nullWinner :: PlayerPosition -> Map PlayerPosition Int -> [PlayerPosition]
-nullWinner singlePlayer scores
-    | (scores ! singlePlayer) == 0 = [singlePlayer]
-    | otherwise                    = [Vorhand, Geber, Mittelhand] Data.List.\\ [singlePlayer]
-
+-- TODO Angesagte Stufe
+nullWinner :: PlayerPosition -> Map PlayerPosition [Card] -> Bool
+nullWinner singlePlayer scores = (scores ! singlePlayer) == []
 
 mNull :: GameMode
 mNull = GameMode {
     cardsCompatible = nullCompatible,
     cardSmaller = nullCardLE,
-    scoreMultiplier = 23,
-    determineGameWinner = \x -> case x of
-                                Just player -> nullWinner player
+    gameValue = const 23, -- TODO
+    determineGameWinner = \x _ cards -> case x of
+                                Just player -> (player, nullWinner player cards)
                                 _ -> error "Null but nobody played??",
     nicesShow = ("Null", "")
 }
 
+{- ========= scoring ========== -}
 
 
 --canPlayRamsch :: SkatState -> PlayerPosition -> Card -> Bool

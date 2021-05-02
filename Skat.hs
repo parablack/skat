@@ -1,4 +1,4 @@
-module Skat(play, gameModeFromString, playerFromPos,mRamsch, ramschFromShuffledDeck, playersFromDeck, initialStateFromDeck) where
+module Skat(play, showCards, gameModeFromString, playerFromPos,mRamsch, playersFromDeck, initialStateFromDeck) where
 -- TODO mRamsch is unnec
 
 import Control.Monad.Except
@@ -42,9 +42,9 @@ scoreForPlayer :: Player -> Int
 scoreForPlayer Player{wonCards=cards} = sum $ map (\(Card name _) -> nameValue name) cards
 
 playersFromDeck :: [Card] -> [Player]
-playersFromDeck deck = [Player Geber (slice 0 9 deck) [],
-            Player Vorhand (slice 10 19 deck) [],
-            Player Mittelhand (slice 20 29 deck) []
+playersFromDeck deck = [Player Geber (slice 0 9 deck) [] False,
+            Player Vorhand (slice 10 19 deck) [] False,
+            Player Mittelhand (slice 20 29 deck) [] False
             ]
 
 {- ================================================ -}
@@ -76,17 +76,6 @@ initialStateFromDeck deck = ReizPhase {
         reizCurrentBid = 17
 }
 
-ramschFromShuffledDeck :: [Card] -> SkatState
-ramschFromShuffledDeck deck = RunningPhase {
-    players = playersFromDeck deck,
-    singlePlayer = Nothing,
-    gameMode = mRamsch,
-    currentStich = [],
-    playedStiche = [],
-    turn = Vorhand
-}
-
-debugRamschState = ramschFromShuffledDeck deck
 -- debugSkatState = ReizPhase {
 --     players = [Player Geber (slice 0 9 debugdeck) [],
 --                Player Vorhand (slice 10 19 debugdeck) [],
@@ -122,15 +111,18 @@ hasGameEnded _     = False
 
 checkGameEnd :: SkatState -> SkatState
 checkGameEnd state = if hasGameEnded state then
-    let scoresTuple = map (\x -> (playerPosition x, scoreForPlayer x)) $ players state
+    let cardsTuple = map (\x -> (playerPosition x, playerCards x)) $ players state
+        cards =  foldl (\ls (player, score) -> Data.Map.insert player score ls) Data.Map.empty cardsTuple
+        scoresTuple = map (\x -> (playerPosition x, scoreForPlayer x)) $ players state
         scores = foldl (\ls (player, score) -> Data.Map.insert player score ls) Data.Map.empty scoresTuple
-        winner = determineGameWinner (gameMode state) (singlePlayer state) scores
+        winner = determineGameWinner (gameMode state) (singlePlayer state) (skatScoringInformation state) cards
      in
     GameFinishedState {
         players = players state,
         lastStich = head $ playedStiche state,
         scores = scores,
-        winner = winner
+        result = (fst winner, snd winner, 0), -- TODO gameValue
+        skatScoringInformation = skatScoringInformation state
     }
     else state
 
@@ -190,17 +182,26 @@ ramschFromReiz state = RunningPhase {
     gameMode = mRamsch,
     currentStich = [],
     playedStiche = [],
-    turn = Vorhand
+    turn = Vorhand,
+    skatScoringInformation = SkatNoScoring
 }
 
 -- player that won the reizen
-skatPickingFromReiz :: SkatState -> PlayerPosition -> SkatState
-skatPickingFromReiz state@ReizPhase{} singlePlayer = SkatPickingPhase {
-    players = newPlayers,
+handPickingFromReiz :: SkatState -> PlayerPosition -> SkatState
+handPickingFromReiz state@ReizPhase{} singlePlayer = HandPickingPhase {
+    players = players state,
+    skat = skat state,
     reizCurrentBid = reizCurrentBid state,
     singlePlayer = Just singlePlayer
-} where newPlayers = addSkatToPlayerCard (skat state) singlePlayer (players state)
-skatPickingFromReiz _ _ = error "SkatPickingFromReiz called on non-reiz state."
+}
+handPickingFromReiz _ _ = error "handPickingFromReiz called on non-reiz state."
+
+{- ================ utils ============== -}
+showCards :: SkatState -> PlayerPosition -> SkatState
+showCards state pos = state {
+    players = newPlayers
+}
+    where newPlayers = map (\x@Player{playerPosition=opos} -> if pos == opos then x { showsCards = True } else x) (players state)
 
 {- ================= play phases ================== -}
 
@@ -227,7 +228,8 @@ play state@SkatPickingPhase{singlePlayer=Just singlePlayer} pos (PlayCard card) 
         10 -> return GamePickingPhase {
             players = players newState,
             reizCurrentBid = reizCurrentBid newState,
-            singlePlayer = Just singlePlayer
+            singlePlayer = Just singlePlayer,
+            isHandSpiel = False
         }
         _  -> error "I am in SkatPicking state, but theres no Skat to Discard."
 
@@ -245,7 +247,7 @@ play state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player (Rei
     case val of
         Reizwert x ->
             if machine == VorhandNix then
-                return $ skatPickingFromReiz state Vorhand
+                return $ handPickingFromReiz state Vorhand
             else return $ state {reizCurrentBid = x, reizAnsagerTurn = False}
         Weg        ->
             return $ case machine of
@@ -253,8 +255,8 @@ play state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player (Rei
                 MittelhandVorhand -> state { reizStateMachine = GeberVorhand }
                 GeberVorhand -> if reizCurrentBid state <= 17 then
                                     state { reizStateMachine = VorhandNix }
-                                else skatPickingFromReiz state Vorhand -- hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
-                MittelhandGeber -> skatPickingFromReiz state Geber
+                                else handPickingFromReiz state Vorhand -- hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
+                MittelhandGeber -> handPickingFromReiz state Geber
 
 play state@ReizPhase{} Vorhand (ReizBid Weg) = throwError "pattern in Reizen does not match"
 
@@ -268,20 +270,50 @@ play stateOrig@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=False} player
         False -> case machine of
                 VorhandNix -> error "Answer to VorhandNix, this should never happen"
                 MittelhandVorhand -> stateOrig { reizStateMachine = MittelhandGeber }
-                MittelhandGeber -> skatPickingFromReiz state Mittelhand
-                GeberVorhand -> skatPickingFromReiz state Geber
+                MittelhandGeber -> handPickingFromReiz state Mittelhand
+                GeberVorhand -> handPickingFromReiz state Geber
 
 play ReizPhase{} _ _ = throwError "pattern in reizAntwort does not match."
 
-play state@GamePickingPhase{} player (PlayVariant var) = do
+play state@HandPickingPhase{} pos (PlayHand var) = do
+    assert (singlePlayer state == Just pos) "Du bist nicht dran mit Hand auswählen!"
+    return $ case var of
+        True ->
+            -- Skat to Handplayer
+            let  newPlayers = foldl (\players card -> (addWonCardsToPlayer pos [card] . removePlayedCard card) players) (players state) (skat state) in
+            GamePickingPhase {
+                players = players state,
+                reizCurrentBid = reizCurrentBid state,
+                isHandSpiel = True,
+                singlePlayer = singlePlayer state
+            }
+        False -> SkatPickingPhase {
+            players = newPlayers,
+            singlePlayer = singlePlayer state,
+            reizCurrentBid = reizCurrentBid state
+        } where newPlayers = addSkatToPlayerCard (skat state) pos (players state)
+
+play state@HandPickingPhase{} player _ = throwError "Hand picking phase requires yes/no answer."
+
+play state@GamePickingPhase{} player (PlayVariant var angesagt) = do
     assert (singlePlayer state == Just player) "Du bist nicht dran mit Spiel auswählen!"
+    -- Achtung: Ansagen nur mit Hand?
+    -- TODO: ouvert show cards!
     return $ RunningPhase {
         players = players state,
         singlePlayer = singlePlayer state,
         currentStich = [],
         playedStiche = [],
         turn = Vorhand,
-        gameMode = var
+        gameMode = var,
+        skatScoringInformation = SkatScoringInformation {
+            isHand = isHandSpiel state,
+            angesagteStufe = angesagt,
+            reizHighestBid = reizCurrentBid state,
+            initialCards = playerCards (playerFromPos state player)
+        }
     }
+
+play state@GamePickingPhase{} player _ = throwError "Game picking phase requires a game pick, nothing else."
 
 play _ _ _ = throwError "You are currently not allowed to make this move."

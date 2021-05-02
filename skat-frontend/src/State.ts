@@ -32,7 +32,7 @@ export interface IRunningState extends ICommonPlayerState {
 
 export interface IFinishedState extends ICommonPlayerState {
     phase: "finished",
-    winner: string[],
+    result: [string, boolean, number],
     scores: { [player: string]: number },
     currentStich: Stich
 }
