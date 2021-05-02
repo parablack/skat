@@ -12,27 +12,26 @@ import qualified Data.List as List
 import qualified Data.Map  as Map
 import Prelude hiding (lookup)
 
-import Definitions
+import Definitions hiding (Player)
 import Skat
 import Util
 
-newtype PlayerId = PlayerId Int
+newtype Player = Player Int
     deriving (Show, Eq, Ord)
 
-newtype LobbyId = LobbyId Int
+newtype Lobby = Lobby Int
     deriving (Show, Eq, Ord)
 
 data PlayerData = PlayerData
   { dataName  :: String,
-    dataLobby :: Maybe LobbyId,
+    dataLobby :: Maybe Lobby,
     dataReply :: SkatStateForPlayer -> IO (),
     dataError :: String -> IO ()
   }
 
 data PositionData = PositionData
-  { dataPlayer    :: Maybe PlayerId,
-    dataResigned  :: Bool,
-    dataShowCards :: Bool
+  { dataPlayer    :: Maybe Player,
+    dataResigned  :: Bool
   }
 
 data LobbyData = LobbyData
@@ -41,12 +40,12 @@ data LobbyData = LobbyData
   }
 
 data ServerData = ServerData
-  { dataPlayers :: Map.Map PlayerId PlayerData,
-    dataLobbies :: Map.Map LobbyId LobbyData
+  { dataPlayers :: Map.Map Player PlayerData,
+    dataLobbies :: Map.Map Lobby LobbyData
   }
 
 emptyPositionData :: PositionData
-emptyPositionData = PositionData Nothing False False
+emptyPositionData = PositionData Nothing False
 
 emptyLobbyData :: LobbyData
 emptyLobbyData = LobbyData
@@ -58,77 +57,185 @@ emptyLobbyData = LobbyData
     dataSkatState = initialStateFromDeck deck
   }
 
+lobbyPositions = [Geber, Vorhand, Mittelhand]
+
 emptyServerData :: ServerData
 emptyServerData = ServerData Map.empty Map.empty
 
+class (Show i, Ord i) => ServerRecord i s r | i -> s, i -> r where
+    extractMap :: s -> Map.Map i r
+    modifyMap :: MonadState s m => (Map.Map i r -> Map.Map i r) -> m ()
 
-class ServerRecord i s r | i -> s, i -> r where
     lookup :: (MonadState s m, MonadError String m) => i -> m r
-    update :: (MonadState s m, MonadError String m) => i -> r -> m ()
+    lookup key = do
+        result <- Map.lookup key . extractMap <$> get
+        case result of
+            Just record -> return record
+            Nothing     -> throwError $ (show key) ++ " not found!"
+
+    insert :: MonadState s m => i -> r -> m ()
+    insert key record = modifyMap $ Map.insert key record
+
+    delete :: MonadState s m => i -> m ()
+    delete key = modifyMap $ Map.delete key
+
+    adjust :: MonadState s m => i -> (r -> r) -> m ()
+    adjust key modifier = modifyMap $ Map.adjust modifier key
 
     using :: (MonadState s m, MonadError String m)
           => i -> ExceptT String (StateT r m) a -> m a
-    using recordId monad = do
-        record <- lookup recordId
+    using key monad = do
+        record <- lookup key
         (err, newRecord) <- runStateT (runExceptT monad) record
         case err of
             Left message -> throwError message
-            Right result -> update recordId newRecord >> return result
+            Right result -> insert key newRecord >> return result
 
 
-errorLookup
-    :: (MonadError String m, Show k, Ord k)
-    => k -> Map.Map k a -> m a
-errorLookup key map =
-    case Map.lookup key map of
-        Just val -> return val
-        Nothing  -> throwError $ (show key) ++ " not found!"
+instance ServerRecord Player ServerData PlayerData where
+    extractMap = dataPlayers
+    modifyMap modifier = modify (\server ->
+        server{ dataPlayers = modifier (dataPlayers server) })
 
-instance ServerRecord PlayerId ServerData PlayerData where
-    lookup playerId = get >>= errorLookup playerId . dataPlayers
-    update playerId record = return ()
-
-instance ServerRecord LobbyId ServerData LobbyData where
-    lookup lobbyId = get >>= errorLookup lobbyId . dataLobbies
-    update lobbyId record = return ()
+instance ServerRecord Lobby ServerData LobbyData where
+    extractMap = dataLobbies
+    modifyMap modifier = modify (\server ->
+        server{ dataLobbies = modifier (dataLobbies server) })
 
 instance ServerRecord PlayerPosition LobbyData PositionData where
-    lookup position = get >>= errorLookup position . dataPositions
-    update playerId record = return ()
+    extractMap = dataPositions
+    modifyMap modifier = modify (\lobby ->
+        lobby{ dataPositions = modifier (dataPositions lobby) })
+
+
+maybeToError :: MonadError String m => String -> Maybe a -> m a
+maybeToError message = maybe (throwError message) return
+
+lookupLobby
+    :: (MonadState ServerData m, MonadError String m) => Player -> m Lobby
+lookupLobby player =
+    dataLobby <$> lookup player
+    >>= maybeToError (show player ++ " is not in a lobby!")
+
+lookupPlayerPosition
+    :: (MonadState LobbyData m, MonadError String m) => Player -> m PlayerPosition
+lookupPlayerPosition player = do
+    maybeMatch <- List.find hasPlayer . Map.assocs . dataPositions <$> get
+    fst <$> maybeToError errorMessage maybeMatch
+  where hasPlayer = (== Just player) . dataPlayer . snd
+        errorMessage = "Position of " ++ show player ++ " not found!"
 
 
 registerPlayer
     :: MonadState ServerData m
-    => String -> (SkatStateForPlayer -> IO ()) -> (String -> IO ()) -> m PlayerId
+    => String -> (SkatStateForPlayer -> IO ()) -> (String -> IO ()) -> m Player
 registerPlayer name onReply onError = do
-    PlayerId maxId <- fst . Map.findMax . dataPlayers <$> get
-    let newId = PlayerId (maxId + 1)
+    Player maxId <- fst . Map.findMax . dataPlayers <$> get
+    let newPlayer = Player (maxId + 1)
     let record = PlayerData name Nothing onReply onError
-    -- TODO insert player
-    return newId
+    insert newPlayer record
+    return newPlayer
 
--- unregisterPlayer
---    :: (MonadState ServerData m, MonadError String m)
---    => PlayerId -> m ()
+unregisterPlayer
+    :: (MonadState ServerData m, MonadError String m)
+    => Player -> m ()
+unregisterPlayer player = do
+    record <- lookup player
+    when (isJust $ dataLobby record) $ leaveLobby player
+    delete player
 
 enterLobby
     :: (MonadState ServerData m, MonadError String m)
-    => PlayerId -> LobbyId -> PlayerPosition -> m ()
-enterLobby playerId lobbyId position = do
-    playerRecord   <- lookup playerId
-    positionRecord <- using lobbyId $ lookup position
+    => Player -> Lobby -> PlayerPosition -> m ()
+enterLobby player lobby position = do
+    playerRecord   <- lookup player
+    positionRecord <- using lobby $ lookup position
     when (isJust $ dataLobby playerRecord) $
-        throwError $ (show playerId) ++ " is already in a lobby!"
+        throwError $ (show player) ++ " is already in a lobby!"
     when (isJust $ dataPlayer positionRecord) $
         throwError $ (show position) ++ " is already used!"
-    update playerId playerRecord{dataLobby = Just lobbyId}
-    using lobbyId $ update position
-        positionRecord{dataPlayer = Just playerId}
+    insert player playerRecord{ dataLobby = Just lobby }
+    using lobby $
+        insert position positionRecord{ dataPlayer = Just player }
 
--- leaveLobby
---    :: (MonadState ServerData m, MonadError String m)
---    => PlayerId -> m ()
+removePlayerFromLobby
+    :: (MonadState LobbyData m, MonadError String m) => Player -> m ()
+removePlayerFromLobby player = do
+    position <- lookupPlayerPosition player
+    adjust position (\record ->
+        record{ dataPlayer = Nothing, dataResigned = False }
+        )
 
--- handlePlayerAction
---    :: (MonadIO m, MonadServerState m, MonadError String m)
---    => PlayerId -> ReceivePacket -> m ()
+leaveLobby :: (MonadState ServerData m, MonadError String m) => Player -> m ()
+leaveLobby player = do
+    lobby <- lookupLobby player
+    using lobby $ removePlayerFromLobby player
+    adjust player (\record -> record{ dataLobby = Nothing })
+
+newGame :: (MonadState LobbyData m, MonadIO m) => m ()
+newGame = do
+    shuffled <- shuffle deck
+    modify (\lobby ->
+        lobby{ dataSkatState = initialStateFromDeck shuffled }
+        )
+    forM_ lobbyPositions (\position ->
+            adjust position (\record -> record{ dataResigned  = False })
+        )
+
+checkRestartGame :: MonadState LobbyData m => m Bool
+checkRestartGame = do
+    records <- Map.elems . dataPositions <$> get
+    let flags = map dataResigned . filter (isJust . dataPlayer) $ records
+    return $ (not $ null flags) && (all id flags)
+
+handlePlayerAction
+   :: (MonadIO m, MonadState ServerData m, MonadError String m)
+   => Player -> ReceivePacket -> m ()
+
+handlePlayerAction player (MakeMove move) = do
+    lobby <- lookupLobby player
+    using lobby $ do
+        position <- lookupPlayerPosition player
+        state <- dataSkatState <$> get
+        newState <- liftEither $ play state position move
+        modify (\lobby -> lobby{ dataSkatState = newState })
+    broadcastState lobby
+
+handlePlayerAction player (SetName name) = do
+    record <- lookup player
+    insert player record{ dataName = name }
+    case dataLobby record of
+        Just lobby -> broadcastState lobby
+        Nothing    -> return ()
+
+handlePlayerAction player Resign = do
+    lobby <- lookupLobby player
+    using lobby $ do
+        position <- lookupPlayerPosition player
+        adjust position (\record -> record {dataResigned = True})
+        needsRestart <- checkRestartGame
+        when needsRestart newGame
+    broadcastState lobby
+
+handlePlayerAction client ShowCards = do
+    throwError "ShowCards not implemented here" -- TODO
+
+broadcastState
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Lobby -> m ()
+broadcastState lobby = do
+    positionAssocs <- using lobby $ Map.assocs . dataPositions <$> get
+    skatState <- using lobby $ dataSkatState <$> get
+
+    let numResigned  = length . filter (dataResigned . snd) $ positionAssocs
+    let showingCards = []        -- TODO compute showing cards
+    let nameMap      = Map.empty -- TODO joinPositionName
+
+    forM_ positionAssocs ( \(position, record) ->
+        case dataPlayer record of
+            Nothing     -> return ()
+            Just player -> do
+                playerRecord <- lookup player
+                (liftIO . dataReply playerRecord)
+                    (SkatStateForPlayer position skatState nameMap numResigned showingCards)
+        )
