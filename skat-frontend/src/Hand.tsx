@@ -170,7 +170,6 @@ export const OpponentHands: React.FC<{ state: IState }> = ({ state }) => {
         }}>
             {<Hand
                 cards={left.cards}
-                onClickCard={() => { }}
                 theta={27 * Math.PI / 180}
                 overlap={0.4}
                 scale={0.55}
