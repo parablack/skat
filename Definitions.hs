@@ -93,7 +93,7 @@ data SkatScoringInformation = SkatScoringInformation {
     angesagteStufe :: SkatGewinnstufe,
     reizHighestBid :: Int,
     initialCards :: [Card]
-} | SkatNoScoring deriving (Eq, Show)
+} deriving (Eq, Show)
 
 data SkatGewinnstufe = Normal | Schneider | Schwarz | Ouvert deriving (Eq, Show, Generic, FromJSON, ToJSON)
 

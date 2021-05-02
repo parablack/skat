@@ -110,7 +110,7 @@ hasGameEnded _     = False
 
 checkGameEnd :: SkatState -> SkatState
 checkGameEnd state = if hasGameEnded state then
-    let cardsTuple = map (\x -> (playerPosition x, playerCards x)) $ players state
+    let cardsTuple = map (\x -> (playerPosition x, wonCards x)) $ players state
         cards =  foldl (\ls (player, score) -> Data.Map.insert player score ls) Data.Map.empty cardsTuple
         scoresTuple = map (\x -> (playerPosition x, scoreForPlayer x)) $ players state
         scores = foldl (\ls (player, score) -> Data.Map.insert player score ls) Data.Map.empty scoresTuple
@@ -187,7 +187,12 @@ ramschFromReiz state = RunningPhase {
     currentStich = [],
     playedStiche = [],
     turn = Vorhand,
-    skatScoringInformation = SkatNoScoring
+    skatScoringInformation = SkatScoringInformation {
+        reizHighestBid = 0,
+        isHand = False,
+        angesagteStufe = Normal,
+        initialCards = []
+    }
 }
 
 -- player that won the reizen

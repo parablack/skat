@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import { App } from './App';
 
-const ws = new WebSocket(`${window.location.protocol === "https:" ? 'wss' : 'ws'}://${window.location.hostname}:8080`)
+let connect_url = window.location.protocol === "https:" ? `wss://${window.location.hostname}/ws` : `ws://${window.location.hostname}:8080`
+const ws = new WebSocket(connect_url)
 ws.onopen = () => {
   console.log("ws opened")
   let nickname = localStorage.getItem("nickname")

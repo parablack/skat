@@ -238,8 +238,16 @@ handlePlayerAction player Resign = do
         when needsRestart newGame
     broadcastState lobby
 
-handlePlayerAction client ShowCards = do
-    throwError "ShowCards not implemented here" -- TODO
+handlePlayerAction player ShowCards = do
+    lobby <- lookupLobby player
+    using lobby $ do
+        position <- lookupPlayerPosition player
+        state <- dataSkatState <$> get
+        newState <- return $ showCards state position
+        modify (\lobby -> lobby{ dataSkatState = newState })
+    broadcastState lobby
+
+--    throwError "ShowCards not implemented here" -- TODO
 
 handlePlayerAction client (JoinLobby num position) = do
     enterLobby client (Lobby num) position
