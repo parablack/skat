@@ -1,6 +1,15 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts #-}
 
-module SkatServer where
+module SkatServer (
+    Player(..),
+    Lobby(..),
+    ServerData,
+    emptyServerData,
+    createLobby,
+    registerPlayer,
+    unregisterPlayer,
+    handlePlayerAction
+) where
 
 import Control.Monad
 import Control.Monad.Except
@@ -25,8 +34,7 @@ newtype Lobby = Lobby Int
 data PlayerData = PlayerData
   { dataName  :: String,
     dataLobby :: Maybe Lobby,
-    dataReply :: SkatStateForPlayer -> IO (),
-    dataError :: String -> IO ()
+    dataReply :: SkatStateForPlayer -> IO ()
   }
 
 data PositionData = PositionData
@@ -60,7 +68,7 @@ emptyLobbyData = LobbyData
 lobbyPositions = [Geber, Vorhand, Mittelhand]
 
 emptyServerData :: ServerData
-emptyServerData = ServerData Map.empty Map.empty
+emptyServerData = ServerData Map.empty (Map.fromList [(Lobby 1, emptyLobbyData)])
 
 class (Show i, Ord i) => ServerRecord i s r | i -> s, i -> r where
     extractMap :: s -> Map.Map i r
@@ -128,11 +136,12 @@ lookupPlayerPosition player = do
 
 registerPlayer
     :: MonadState ServerData m
-    => String -> (SkatStateForPlayer -> IO ()) -> (String -> IO ()) -> m Player
-registerPlayer name onReply onError = do
-    Player maxId <- fst . Map.findMax . dataPlayers <$> get
+    => String -> (SkatStateForPlayer -> IO ()) -> m Player
+registerPlayer name onReply = do
+    players <- dataPlayers <$> get
+    let Player maxId = if null players then Player 0 else fst . Map.findMax $ players
     let newPlayer = Player (maxId + 1)
-    let record = PlayerData name Nothing onReply onError
+    let record = PlayerData name Nothing onReply
     insert newPlayer record
     return newPlayer
 
@@ -143,6 +152,15 @@ unregisterPlayer player = do
     record <- lookup player
     when (isJust $ dataLobby record) $ leaveLobby player
     delete player
+
+createLobby
+    :: (MonadState ServerData m, MonadError String m, MonadIO m) => m Lobby
+createLobby = do
+    Lobby maxId <- fst . Map.findMax . dataLobbies <$> get
+    let newLobby = Lobby (maxId + 1)
+    insert newLobby emptyLobbyData
+    using newLobby newGame
+    return newLobby
 
 enterLobby
     :: (MonadState ServerData m, MonadError String m)
@@ -219,6 +237,10 @@ handlePlayerAction player Resign = do
 
 handlePlayerAction client ShowCards = do
     throwError "ShowCards not implemented here" -- TODO
+
+handlePlayerAction client (JoinLobby num position) = do
+    enterLobby client (Lobby num) position
+    broadcastState (Lobby num)
 
 lobbyNameMap
     :: (MonadState ServerData m, MonadError String m)

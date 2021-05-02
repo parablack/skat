@@ -1,4 +1,4 @@
-module Server (
+module WebSockServer (
     Client,
     Event(..),
     ServerConfig(..),
