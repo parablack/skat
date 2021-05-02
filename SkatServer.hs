@@ -220,6 +220,17 @@ handlePlayerAction player Resign = do
 handlePlayerAction client ShowCards = do
     throwError "ShowCards not implemented here" -- TODO
 
+lobbyNameMap
+    :: (MonadState ServerData m, MonadError String m)
+    => Lobby -> m (Map.Map String String)
+lobbyNameMap lobby = do
+    players <- using lobby $
+        catMaybes . map dataPlayer . Map.elems . dataPositions <$> get
+    positionNames <- using lobby $
+        map show <$> mapM lookupPlayerPosition players
+    playerNames <- map dataName <$> mapM lookup players
+    return $ Map.fromList $ zip positionNames playerNames
+
 broadcastState
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
     => Lobby -> m ()
@@ -228,8 +239,8 @@ broadcastState lobby = do
     skatState <- using lobby $ dataSkatState <$> get
 
     let numResigned  = length . filter (dataResigned . snd) $ positionAssocs
-    let showingCards = []        -- TODO compute showing cards
-    let nameMap      = Map.empty -- TODO joinPositionName
+    let showingCards = map playerPosition $ filter showsCards (players skatState)
+    nameMap          <- lobbyNameMap lobby
 
     forM_ positionAssocs ( \(position, record) ->
         case dataPlayer record of
