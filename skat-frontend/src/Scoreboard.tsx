@@ -7,15 +7,19 @@ export const Scoreboard: React.FC<{ state: IFinishedState }> = ({ state }) => {
     let resultName = state.names[state.result[0]] || "Alarm?"
     let resultWon = state.result[1];
     let resultPoints = state.result[2];
+    let resultUeberreizt = state.result[3];
 
     return <div>
-        {resultName} hat {resultWon ? <>gewonnen</> : <>verloren 😢</>}!
-        <br /> Dies gibt {resultPoints} Punkte!
+        {resultName} hat {resultWon ? <>gewonnen</> :
+            resultUeberreizt ? <>verloren 😢</> : <>sich überreizt 😢😢😢</>}!
+        {}
+        <br /> Das Spiel war {resultPoints} Punkte wert!
+        <br /> Damit bekommt {resultName} {resultWon ? resultPoints : -2*resultPoints} Punkte.
         <table>
             <tbody>
                 {
                     Object.entries(state.scores).map(([name, score]) =>
-                     <tr>
+                     <tr key={name}>
                         <td>{state.names[name] || name}</td>
                         <td>{score}</td>
                     </tr> )

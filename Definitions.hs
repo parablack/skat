@@ -79,7 +79,8 @@ data GameMode = GameMode {
     cardSmaller :: Card -> Card -> Bool,
     -- single player, scores, (person, hasWon?)
     determineGameWinner :: Maybe PlayerPosition -> SkatScoringInformation -> (Map PlayerPosition [Card]) -> (PlayerPosition, Bool),
-    gameValue :: SkatScoringInformation -> Int,
+    -- scoring, cards of single player
+    gameValue :: SkatScoringInformation -> [Card] -> Int,
     nicesShow :: GameModeMeta
 }
 instance (Show GameMode) where
@@ -140,7 +141,8 @@ data SkatState =
         players :: [Player],
         lastStich :: Stich,
         scores :: Map PlayerPosition Int,
-        result :: (PlayerPosition, Bool, Int),
+        -- pos, hasWon?, game value, ueberreizt?
+        result :: (PlayerPosition, Bool, Int, Bool),
         skatScoringInformation :: SkatScoringInformation
     }
     deriving (Eq, Show)

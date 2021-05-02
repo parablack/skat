@@ -1,5 +1,4 @@
-module Skat(play, showCards, gameModeFromString, playerFromPos,mRamsch, playersFromDeck, initialStateFromDeck) where
--- TODO mRamsch is unnec
+module Skat(play, showCards, gameModeFromString, playerFromPos, playersFromDeck, initialStateFromDeck) where
 
 import Control.Monad.Except
 import Data.List
@@ -116,12 +115,17 @@ checkGameEnd state = if hasGameEnded state then
         scoresTuple = map (\x -> (playerPosition x, scoreForPlayer x)) $ players state
         scores = foldl (\ls (player, score) -> Data.Map.insert player score ls) Data.Map.empty scoresTuple
         winner = determineGameWinner (gameMode state) (singlePlayer state) (skatScoringInformation state) cards
+        winnerPlayer = playerFromPos state $ fst winner
+        initialReizValue = reizHighestBid $ skatScoringInformation state
+        value            = gameValue (gameMode state) (skatScoringInformation state) (wonCards winnerPlayer)
+        ueberreizt       = initialReizValue > value
+        hasWon           = snd winner && not ueberreizt
      in
     GameFinishedState {
         players = players state,
         lastStich = head $ playedStiche state,
         scores = scores,
-        result = (fst winner, snd winner, 0), -- TODO gameValue
+        result = (fst winner, hasWon, value, ueberreizt),
         skatScoringInformation = skatScoringInformation state
     }
     else state
@@ -282,25 +286,30 @@ play state@HandPickingPhase{} pos (PlayHand var) = do
             -- Skat to Handplayer
             let  newPlayers = foldl (\players card -> (addWonCardsToPlayer pos [card] . removePlayedCard card) players) (players state) (skat state) in
             GamePickingPhase {
-                players = players state,
+                players = newPlayers,
                 reizCurrentBid = reizCurrentBid state,
                 isHandSpiel = True,
                 singlePlayer = singlePlayer state
             }
-        False -> SkatPickingPhase {
-            players = newPlayers,
-            singlePlayer = singlePlayer state,
-            reizCurrentBid = reizCurrentBid state
-        } where newPlayers = addSkatToPlayerCard (skat state) pos (players state)
+        False ->
+            let newPlayers = addSkatToPlayerCard (skat state) pos (players state) in
+            SkatPickingPhase {
+                players = newPlayers,
+                singlePlayer = singlePlayer state,
+                reizCurrentBid = reizCurrentBid state
+            }
 
 play state@HandPickingPhase{} player _ = throwError "Hand picking phase requires yes/no answer."
 
-play state@GamePickingPhase{} player (PlayVariant var angesagt) = do
-    assert (singlePlayer state == Just player) "Du bist nicht dran mit Spiel auswählen!"
+play state@GamePickingPhase{} pos (PlayVariant var angesagt) = do
+    assert (singlePlayer state == Just pos) "Du bist nicht dran mit Spiel auswählen!"
     -- Achtung: Ansagen nur mit Hand?
-    -- TODO: ouvert show cards!
+    let playersOuvert = if angesagt == Ouvert then
+            map (\player -> if playerPosition player == pos then player { showsCards = True } else player) (players state)
+        else
+            players state
     return $ RunningPhase {
-        players = players state,
+        players = playersOuvert,
         singlePlayer = singlePlayer state,
         currentStich = [],
         playedStiche = [],
@@ -310,7 +319,7 @@ play state@GamePickingPhase{} player (PlayVariant var angesagt) = do
             isHand = isHandSpiel state,
             angesagteStufe = angesagt,
             reizHighestBid = reizCurrentBid state,
-            initialCards = playerCards (playerFromPos state player)
+            initialCards = playerCards (playerFromPos state pos)
         }
     }
 

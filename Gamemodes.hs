@@ -29,7 +29,7 @@ singlePlayerHasWon pos info@SkatScoringInformation{angesagteStufe=stufe} cards =
 mRamsch = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
-    gameValue = const 1,
+    gameValue = \_ x -> sumCards x,
     determineGameWinner = \_ _ scores -> (simpleWinner scores, False),
     nicesShow = ("Ramsch", "")
 }
@@ -66,7 +66,7 @@ factorGewinnstufe state@SkatScoringInformation{angesagteStufe=stufe} myCards
 mGrand = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
-    gameValue = const 24, -- TODO
+    gameValue = \x cards -> 24 * ((factorGameValue bubenSpitzen x) + (factorGewinnstufe x cards)),
     determineGameWinner = \x info cards -> case x of
                                 Just player -> (player, singlePlayerHasWon player info cards)
                                 _ -> error "Grand but nobody played??",
@@ -97,7 +97,7 @@ mColor :: Suit -> GameMode
 mColor color = GameMode {
     cardsCompatible = farbCompatible color,
     cardSmaller = farbCardLE color,
-    gameValue = const (suitValue color), -- TODO
+    gameValue = \x cards -> (suitValue color) * ((factorGameValue (farbSpitzen color) x) + (factorGewinnstufe x cards)),
     determineGameWinner = \x info cards -> case x of
                                 Just player -> (player, singlePlayerHasWon player info cards)
                                 _ -> error "Farb but nobody played??",
@@ -113,15 +113,20 @@ nullCardLE (Card x suit) (Card y suit')
     | suit == suit' = fromJust (elemIndex x nullOrdering) <= fromJust (elemIndex y nullOrdering)
     | otherwise     = False
 
--- TODO Angesagte Stufe
 nullWinner :: PlayerPosition -> Map PlayerPosition [Card] -> Bool
 nullWinner singlePlayer scores = (scores ! singlePlayer) == []
+
+nullValue :: SkatScoringInformation -> Int
+nullValue SkatScoringInformation{isHand=True, angesagteStufe = Ouvert} = 59
+nullValue SkatScoringInformation{angesagteStufe = Ouvert} = 46
+nullValue SkatScoringInformation{isHand=True} = 35
+nullValue _ = 23
 
 mNull :: GameMode
 mNull = GameMode {
     cardsCompatible = nullCompatible,
     cardSmaller = nullCardLE,
-    gameValue = const 23, -- TODO
+    gameValue = \x _ -> nullValue x,
     determineGameWinner = \x _ cards -> case x of
                                 Just player -> (player, nullWinner player cards)
                                 _ -> error "Null but nobody played??",

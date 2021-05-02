@@ -2,6 +2,8 @@ type Player = "Geber" | "Vorhand" | "Mittelhand"
 
 export interface ICard { suit: string, name: string }
 
+export interface IScoring { hand: boolean, angesagt: string }
+
 export type Stich = ([ICard, Player])[]
 
 interface ICommonPlayerState {
@@ -27,12 +29,14 @@ export interface IRunningState extends ICommonPlayerState {
         color: string,
     },
     currentStich: Stich,
-    lastStich: Stich
+    lastStich: Stich,
+    scoring: IScoring
 }
 
 export interface IFinishedState extends ICommonPlayerState {
     phase: "finished",
-    result: [string, boolean, number],
+    // player, won, game value, überreizt?
+    result: [string, boolean, number, boolean],
     scores: { [player: string]: number },
     currentStich: Stich
 }

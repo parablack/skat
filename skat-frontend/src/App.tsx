@@ -273,9 +273,12 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                     </span>{' '}
                     {geileDeutschMap[state.gamemode.color]}</>
                     : state.gamemode.kind}
+                    {' '}
+                    {state.scoring.hand ? "Hand" : " "}{' '}{state.scoring.angesagt}
                 </span>
                 : <span>Heute spielen Sie: {sieSpielen}</span>}
             </small>
+
           </header>
 
           <div>
