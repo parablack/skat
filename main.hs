@@ -83,6 +83,7 @@ handleEvent (Message client message) = do
 main = do
   putStrLn "Listening on 0.0.0.0:8080"
   let initialMainData = MainData emptyServerData Map.empty [Geber, Vorhand, Mittelhand]
-  evalStateT
-      (runWebSockServer defaultServerConfig handleEvent)
-      initialMainData
+  evalStateT (do
+      runServer $ createLobby
+      runWebSockServer defaultServerConfig handleEvent
+      ) initialMainData

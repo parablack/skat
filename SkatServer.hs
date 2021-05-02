@@ -70,7 +70,7 @@ emptyLobbyData = LobbyData
 lobbyPositions = [Geber, Vorhand, Mittelhand]
 
 emptyServerData :: ServerData
-emptyServerData = ServerData Map.empty (Map.fromList [(Lobby 1, emptyLobbyData)])
+emptyServerData = ServerData Map.empty Map.empty
 
 class (Show i, Ord i) => ServerRecord i s r | i -> s, i -> r where
     extractMap :: s -> Map.Map i r
@@ -158,7 +158,8 @@ unregisterPlayer player = do
 createLobby
     :: (MonadState ServerData m, MonadError String m, MonadIO m) => m Lobby
 createLobby = do
-    Lobby maxId <- fst . Map.findMax . dataLobbies <$> get
+    lobbies <- dataLobbies <$> get
+    let Lobby maxId = if null lobbies then Lobby 0 else fst . Map.findMax $ lobbies
     let newLobby = Lobby (maxId + 1)
     insert newLobby emptyLobbyData
     using newLobby newGame
