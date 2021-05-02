@@ -319,7 +319,7 @@ play state@GamePickingPhase{} pos (PlayVariant var angesagt) = do
             isHand = isHandSpiel state,
             angesagteStufe = angesagt,
             reizHighestBid = reizCurrentBid state,
-            initialCards = playerCards (playerFromPos state pos)
+            initialCards = playerCards (playerFromPos state pos) ++ wonCards (playerFromPos state pos)
         }
     }
 

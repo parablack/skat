@@ -52,16 +52,19 @@ farbSpitzen suit = bubenSpitzen ++ (reverse $ sort [(Card kind suit) | kind <- n
 factorGameValue :: [Card] -> SkatScoringInformation -> Int
 factorGameValue spitzen SkatScoringInformation{initialCards = cards} = fst $ countSpitzen spitzen cards
 
+-- Achtung: Unterscheidet sich von der offiziellen Skatordnung, es kann auch ohne Hand angesagt werden!
 -- angesagt, score of single player
 factorGewinnstufe :: SkatScoringInformation -> [Card] -> Int
 factorGewinnstufe state@SkatScoringInformation{angesagteStufe=stufe} myCards
     | stufe == Ouvert                    = 6 + handBonus -- ouvert
     | stufe == Schwarz                   = 5 + handBonus -- schwarz angesagt
-    | stufe == Schneider                 = 4 + handBonus -- schneider angesagt
-    | length myCards == 32               = 3 + handBonus -- schwarz
-    | sumCards myCards >= 90             = 2 + handBonus -- schneider
+    | stufe == Schneider && schwarz      = 4 + handBonus -- schneider angesagt
+    | stufe == Schneider || schwarz      = 3 + handBonus -- schneider angesagt
+    | schneider                          = 2 + handBonus -- schneider
     | stufe == Normal                    = 1 + handBonus -- normal
     where handBonus = if isHand state then 1 else 0
+          schneider = sumCards myCards >= 90 || sumCards myCards <= 30
+          schwarz   = length myCards == 32   || length myCards == 0
 
 mGrand = GameMode {
     cardsCompatible = simpleCompatible,
