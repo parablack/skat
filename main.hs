@@ -63,6 +63,10 @@ handleEvent (Disconnect client cause) = do
   println $ (show client) ++ " " ++ show cause ++ ": disconnected!"
   player <- fromJust . Map.lookup client . dataClientMap <$> get
   println $ (show player) ++ " removed!"
+  ePosition <- runServer $ using (Lobby 1) $ lookupPlayerPosition player
+  case ePosition of
+      Left msg       -> println $ "Error: " ++ msg
+      Right position -> modify (\record -> record { dataAvailPositions = position : (dataAvailPositions record) } )
   runServer $ unregisterPlayer player
   modify (\record -> record { dataClientMap = Map.delete client (dataClientMap record) } )
 

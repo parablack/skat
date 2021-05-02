@@ -8,7 +8,9 @@ module SkatServer (
     createLobby,
     registerPlayer,
     unregisterPlayer,
-    handlePlayerAction
+    handlePlayerAction,
+    lookupPlayerPosition,
+    using
 ) where
 
 import Control.Monad
