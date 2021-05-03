@@ -92,7 +92,7 @@ defaultServerConfig :: ServerConfig
 defaultServerConfig = ServerConfig
   { configAddress = "0.0.0.0",
     configPort    = 8080,
-    configNumIds  = 3
+    configNumIds  = 6
   }
 
 runWebSockServer :: MonadIO m => ServerConfig -> (Event -> m ()) -> m ()

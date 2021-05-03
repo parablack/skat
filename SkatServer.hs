@@ -5,12 +5,11 @@ module SkatServer (
     Lobby(..),
     ServerData,
     emptyServerData,
-    createLobby,
+    registerLobby,
     registerPlayer,
     unregisterPlayer,
     handlePlayerAction,
-    lookupPlayerPosition,
-    using
+    joinFreeLobby
 ) where
 
 import Control.Monad
@@ -27,10 +26,10 @@ import Definitions hiding (Player)
 import Skat
 import Util
 
-newtype Player = Player Int
+newtype Player = Player String
     deriving (Show, Eq, Ord)
 
-newtype Lobby = Lobby Int
+newtype Lobby = Lobby String
     deriving (Show, Eq, Ord)
 
 data PlayerData = PlayerData
@@ -137,15 +136,14 @@ lookupPlayerPosition player = do
 
 
 registerPlayer
-    :: MonadState ServerData m
-    => String -> (SkatStateForPlayer -> IO ()) -> m Player
-registerPlayer name onReply = do
-    players <- dataPlayers <$> get
-    let Player maxId = if null players then Player 0 else fst . Map.findMax $ players
-    let newPlayer = Player (maxId + 1)
-    let record = PlayerData name Nothing onReply
-    insert newPlayer record
-    return newPlayer
+    :: (MonadState ServerData m, MonadError String m)
+    => Player -> String -> (SkatStateForPlayer -> IO ()) -> m ()
+registerPlayer player name onReply = do
+    players <- Map.keys . dataPlayers <$> get
+    if elem player players then
+        throwError $ (show player) ++ " already registered!"
+    else
+        insert player (PlayerData name Nothing onReply)
 
 unregisterPlayer
     :: (MonadState ServerData m, MonadError String m)
@@ -155,15 +153,16 @@ unregisterPlayer player = do
     when (isJust $ dataLobby record) $ leaveLobby player
     delete player
 
-createLobby
-    :: (MonadState ServerData m, MonadError String m, MonadIO m) => m Lobby
-createLobby = do
-    lobbies <- dataLobbies <$> get
-    let Lobby maxId = if null lobbies then Lobby 0 else fst . Map.findMax $ lobbies
-    let newLobby = Lobby (maxId + 1)
-    insert newLobby emptyLobbyData
-    using newLobby newGame
-    return newLobby
+registerLobby
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Lobby -> m ()
+registerLobby lobby = do
+    lobbies <- Map.keys . dataLobbies <$> get
+    if elem lobby lobbies then
+        throwError $ (show lobby) ++ " already registered!"
+    else do
+        insert lobby emptyLobbyData
+        using lobby newGame
 
 enterLobby
     :: (MonadState ServerData m, MonadError String m)
@@ -249,9 +248,9 @@ handlePlayerAction player ShowCards = do
 
 --    throwError "ShowCards not implemented here" -- TODO
 
-handlePlayerAction client (JoinLobby num position) = do
-    enterLobby client (Lobby num) position
-    broadcastState (Lobby num)
+handlePlayerAction client (JoinLobby uid position) = do
+    enterLobby client (Lobby uid) position
+    broadcastState (Lobby uid)
 
 lobbyNameMap
     :: (MonadState ServerData m, MonadError String m)
@@ -283,3 +282,21 @@ broadcastState lobby = do
                 (liftIO . dataReply playerRecord)
                     (SkatStateForPlayer position skatState nameMap numResigned showingCards)
         )
+
+freePositions
+    :: MonadState LobbyData m => m [PlayerPosition]
+freePositions =
+    map fst . filter (isNothing . dataPlayer . snd) . Map.assocs . dataPositions <$> get
+
+joinFreeLobby
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Player -> m ()
+joinFreeLobby player = do
+    lobbies <- Map.keys . dataLobbies <$> get
+    avail <- forM lobbies $ flip using freePositions
+    let free = List.find (not . null . snd) $ zip lobbies avail
+    case free of
+        Just (lobby, position:_) -> do
+            enterLobby player lobby position
+            broadcastState lobby
+        _ -> throwError "No free lobby found!"

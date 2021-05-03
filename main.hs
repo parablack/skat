@@ -23,60 +23,29 @@ import Util
 import WebSockServer
 
 
-data MainData = MainData
-  { dataServerData :: ServerData,
-    dataClientMap  :: Map.Map Client SkatServer.Player,
-    dataAvailPositions :: [PlayerPosition]
-  }
-
-runServer :: ExceptT String (StateT ServerData IO) a ->  (StateT MainData IO) (Either String a)
-runServer monad = do
-    serverData <- dataServerData <$> get
-    (err, newData) <- lift $ runStateT (runExceptT monad) serverData
-    modify (\record -> record{ dataServerData = newData })
-    return err
-
 replyError :: MonadIO m => Client -> String -> m ()
 replyError client err =
   reply client . encode . object $ [ pack "error" .= err ]
 
 
-handleEvent :: Event -> StateT MainData IO ()
+handleEvent :: Event -> ExceptT String (StateT ServerData IO) ()
 handleEvent (Connect client) = do
-  println $ (show client) ++ ": connected!"
-  result <- runServer $ registerPlayer "Anon" (reply client . encode)
-  case result of
-      Left message  ->
-        replyError client message
-      Right player -> do
-        nextPos : otherPos <- dataAvailPositions <$> get
-        runServer $ handlePlayerAction player (JoinLobby 1 nextPos)
-        modify (\record ->
-            record {
-                dataClientMap = Map.insert client player (dataClientMap record),
-                dataAvailPositions = otherPos
-                }
-            )
-        println $ (show player) ++ " added!"
-        return ()
+    let player = SkatServer.Player (show client)
+    registerPlayer player "Anon" (reply client . encode)
+    joinFreeLobby player
+    println $ (show player) ++ " added!"
 
 handleEvent (Disconnect client cause) = do
-  println $ (show client) ++ " " ++ show cause ++ ": disconnected!"
-  player <- fromJust . Map.lookup client . dataClientMap <$> get
-  println $ (show player) ++ " removed!"
-  ePosition <- runServer $ using (Lobby 1) $ lookupPlayerPosition player
-  case ePosition of
-      Left msg       -> println $ "Error: " ++ msg
-      Right position -> modify (\record -> record { dataAvailPositions = position : (dataAvailPositions record) } )
-  runServer $ unregisterPlayer player
-  modify (\record -> record { dataClientMap = Map.delete client (dataClientMap record) } )
+  let player = SkatServer.Player (show client)
+  unregisterPlayer player
+  println $ (show player) ++ " removed! (" ++ show cause ++ ")"
 
 handleEvent (Message client message) = do
-    player <- fromJust . Map.lookup client . dataClientMap <$> get
+    let player = SkatServer.Player (show client)
     let maybeTAction = MaybeT . return . decodeStrict . encodeUtf8 . pack $ message
     result <- runExceptT $ do
-        action <- maybeToExceptT "couldn't deserialize action" maybeTAction
-        ExceptT $ runServer $ handlePlayerAction player action
+        action <- maybeToExceptT "Couldn't deserialize action!" maybeTAction
+        handlePlayerAction player action
     case result of
       Left err -> replyError client err
       Right _  -> return ()
@@ -84,8 +53,10 @@ handleEvent (Message client message) = do
 main = do
   hSetBuffering stdout LineBuffering
   putStrLn "Listening on 0.0.0.0:8080"
-  let initialMainData = MainData emptyServerData Map.empty [Geber, Vorhand, Mittelhand]
-  evalStateT (do
-      runServer $ createLobby
-      runWebSockServer defaultServerConfig handleEvent
-      ) initialMainData
+  err <- flip evalStateT emptyServerData $ runExceptT $ do
+            registerLobby (Lobby "L1")
+            registerLobby (Lobby "L2")
+            runWebSockServer defaultServerConfig handleEvent
+  case err of
+      Left message -> println $ "Server terminated because of error: " ++ message
+      Right ()     -> println $ "Server terminated witout error."

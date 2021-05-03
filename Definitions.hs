@@ -187,8 +187,8 @@ data ReceivePacket
     | SetName String
     | ShowCards
     | Resign
-    | LeaveLobby Int
-    | JoinLobby Int PlayerPosition
+    | LeaveLobby String -- TODO lobby instead of string
+    | JoinLobby String PlayerPosition
     deriving (Show, Eq)
 
 -- For Ramsch, grand
