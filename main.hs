@@ -13,6 +13,7 @@ import Data.Maybe
 import Control.Monad.Trans.Maybe
 import Data.Text
 import Data.Text.Encoding
+import System.IO
 
 import Definitions
 import Serializer
@@ -81,6 +82,7 @@ handleEvent (Message client message) = do
       Right _  -> return ()
 
 main = do
+  hSetBuffering stdout LineBuffering
   putStrLn "Listening on 0.0.0.0:8080"
   let initialMainData = MainData emptyServerData Map.empty [Geber, Vorhand, Mittelhand]
   evalStateT (do
