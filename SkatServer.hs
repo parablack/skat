@@ -66,7 +66,7 @@ emptyLobbyData = LobbyData
     dataSkatState = initialStateFromDeck deck
   }
 
-lobbyPositions = [Geber, Vorhand, Mittelhand]
+allPlayerPositions = [Geber, Vorhand, Mittelhand]
 
 emptyServerData :: ServerData
 emptyServerData = ServerData Map.empty Map.empty
@@ -136,7 +136,7 @@ lookupPlayerPosition player = do
 
 
 registerPlayer
-    :: (MonadState ServerData m, MonadError String m)
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
     => Player -> String -> (PlayerResponse -> IO ()) -> m ()
 registerPlayer player name onReply = do
     players <- Map.keys . dataPlayers <$> get
@@ -144,6 +144,7 @@ registerPlayer player name onReply = do
         throwError $ (show player) ++ " already registered!"
     else
         insert player (PlayerData name Nothing onReply)
+    sendPlayerResponse player
 
 unregisterPlayer
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
@@ -154,7 +155,7 @@ unregisterPlayer player = do
         Nothing -> return ()
         Just lobby -> do
             leaveLobby player
-            broadcastState lobby
+            broadcastLobby lobby
     delete player
 
 registerLobby
@@ -202,7 +203,7 @@ newGame = do
     modify (\lobby ->
         lobby{ dataSkatState = initialStateFromDeck shuffled }
         )
-    forM_ lobbyPositions (\position ->
+    forM_ allPlayerPositions (\position ->
             adjust position (\record -> record{ dataResigned  = False })
         )
 
@@ -223,13 +224,13 @@ handlePlayerAction player (MakeMove move) = do
         state <- dataSkatState <$> get
         newState <- liftEither $ play state position move
         modify (\lobby -> lobby{ dataSkatState = newState })
-    broadcastState lobby
+    broadcastLobby lobby
 
 handlePlayerAction player (SetName name) = do
     record <- lookup player
     insert player record{ dataName = name }
     case dataLobby record of
-        Just lobby -> broadcastState lobby
+        Just lobby -> broadcastLobby lobby
         Nothing    -> return ()
 
 handlePlayerAction player Resign = do
@@ -239,7 +240,7 @@ handlePlayerAction player Resign = do
         adjust position (\record -> record {dataResigned = True})
         needsRestart <- checkRestartGame
         when needsRestart newGame
-    broadcastState lobby
+    broadcastLobby lobby
 
 handlePlayerAction player ShowCards = do
     lobby <- lookupLobby player
@@ -248,14 +249,14 @@ handlePlayerAction player ShowCards = do
         state <- dataSkatState <$> get
         newState <- return $ showCards state position
         modify (\lobby -> lobby{ dataSkatState = newState })
-    broadcastState lobby
+    broadcastLobby lobby
 
 --    throwError "ShowCards not implemented here" -- TODO
 
 handlePlayerAction client (JoinLobby uid position) = do
     let lobby = Lobby uid
     enterLobby client lobby position
-    broadcastState lobby
+    broadcastLobby lobby
 
 handlePlayerAction player LeaveLobby = do
     maybeLobby <- dataLobby <$> lookup player
@@ -263,7 +264,8 @@ handlePlayerAction player LeaveLobby = do
         Nothing -> throwError $ (show player) ++ "is not in a lobby!"
         Just lobby -> do
             leaveLobby player
-            broadcastState lobby
+            broadcastLobby lobby
+            sendPlayerResponse player
 
 lobbyNameMap
     :: (MonadState ServerData m, MonadError String m)
@@ -276,10 +278,47 @@ lobbyNameMap lobby = do
     playerNames <- map dataName <$> mapM lookup players
     return $ Map.fromList $ zip positionNames playerNames
 
-broadcastState
+
+buildLobbyForPlayer
+    :: (MonadState ServerData m, MonadError String m)
+    => Lobby -> m LobbyForPlayer
+buildLobbyForPlayer lobby@(Lobby num) = do
+    positions <- using lobby $ Map.map dataPlayer . dataPositions <$> get
+    maybePosAssocs <-
+        forM (Map.assocs positions) (\(position, maybePlayer) ->
+                case maybePlayer of
+                    Nothing -> return Nothing
+                    Just player -> do
+                        record <- lookup player
+                        return $ Just (position, dataName record)
+            )
+    return $ LobbyForPlayer {
+        lobbyId        = num,
+        lobbyName      = "Lobby " ++ (show num),
+        lobbyPositions = (Map.fromList . catMaybes $ maybePosAssocs)
+    }
+
+buildLobbyResponse
+    :: (MonadState ServerData m, MonadError String m) => m PlayerResponse
+buildLobbyResponse = do
+    lobbies <- Map.keys . dataLobbies <$> get
+    LobbyResponse <$> (sequence $ List.map buildLobbyForPlayer lobbies)
+
+
+sendPlayerResponse
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Player -> m ()
+sendPlayerResponse player = do
+    playerRecord <- lookup player
+    case dataLobby playerRecord of
+        Just lobby -> broadcastLobby lobby
+        Nothing    ->
+            buildLobbyResponse >>= liftIO . dataReply playerRecord
+
+broadcastLobby
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
     => Lobby -> m ()
-broadcastState lobby = do
+broadcastLobby lobby = do
     positionAssocs <- using lobby $ Map.assocs . dataPositions <$> get
     skatState <- using lobby $ dataSkatState <$> get
 
@@ -311,7 +350,7 @@ joinFreeLobby player = do
     case free of
         Just (lobby, position:_) -> do
             enterLobby player lobby position
-            broadcastState lobby
+            broadcastLobby lobby
         _ -> throwError "No free lobby found!"
 
 

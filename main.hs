@@ -32,7 +32,6 @@ handleEvent :: Event -> ExceptT String (StateT ServerData IO) ()
 handleEvent (Connect client) = do
     let player = SkatServer.Player (show client)
     registerPlayer player "Anon" (reply client . encode)
-    joinFreeLobby player
     println $ (show player) ++ " added!"
 
 handleEvent (Disconnect client cause) = do
