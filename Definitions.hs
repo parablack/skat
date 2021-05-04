@@ -201,6 +201,7 @@ data ReceivePacket
     | Resign
     | LeaveLobby
     | JoinLobby Int PlayerPosition
+    | ChangePosition PlayerPosition
     deriving (Show, Eq)
 
 -- For Ramsch, grand

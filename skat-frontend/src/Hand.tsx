@@ -133,7 +133,11 @@ export const YourHand: React.FC<{ state: IGameState, onClickCard: (card: ICard) 
 
 
 
-export const OpponentHands: React.FC<{ state: IGameState }> = ({ state }) => {
+export const OpponentHands: React.FC<{
+        state: IGameState,
+        onChangePos: (pos: String) => void
+    }> = ({ state, onChangePos }) => {
+
     let you = state.you.position;
     let left = createPlayerStruct(state, nextPlayer(you))
     let right = createPlayerStruct(state, nextPlayer(nextPlayer(you)))
@@ -149,8 +153,14 @@ export const OpponentHands: React.FC<{ state: IGameState }> = ({ state }) => {
             flexDirection: "column",
             color: left.active ? "red" : "white"
         }}>
-            <div>{left.name}</div>
+            {left.name
+                ? <div>{left.name}</div>
+                : <button onClick={() => {
+                    onChangePos(left.position)
+                  }}>Mein Platz!</button>
+            }
             <div><small>{left.position}</small></div>
+
         </div>
         <div style={{
             position: "absolute",
@@ -159,7 +169,12 @@ export const OpponentHands: React.FC<{ state: IGameState }> = ({ state }) => {
             flexDirection: "column",
             color: right.active ? "red" : "white"
         }}>
-            <div>{right.name}</div>
+            {left.name
+                ? <div>{left.name}</div>
+                : <button onClick={() => {
+                    onChangePos(right.position)
+                  }}>Mein Platz!</button>
+            }
             <div><small>{right.position}</small></div>
         </div>
         <div style={{

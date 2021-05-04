@@ -123,7 +123,13 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
 
           {inLobby(state) ? (
             <span style={{ margin: '.4em' }}>
-              <OpponentHands state={state} />
+              <OpponentHands
+                state={state}
+                onChangePos={
+                    (pos) => ws.send(
+                        JSON.stringify({ action: "changepos", position: pos})
+                    )}
+              />
             </span>
           ) : null}
 

@@ -212,16 +212,22 @@ newGame = do
             adjust position (\record -> record{ dataResigned  = False })
         )
 
+changePositions
+    :: MonadState LobbyData m
+    => (PlayerPosition -> PlayerPosition) -> m ()
+changePositions newPosition =
+    modify (\record ->
+        record{ dataPositions = Map.mapKeys newPosition (dataPositions record) }
+        )
+
 nextPosition :: PlayerPosition -> PlayerPosition
 nextPosition Geber      = Mittelhand
 nextPosition Mittelhand = Vorhand
 nextPosition Vorhand    = Geber
 
 rotatePositions :: MonadState LobbyData m => m ()
-rotatePositions =
-    modify (\record ->
-        record{ dataPositions = Map.mapKeys nextPosition (dataPositions record) }
-        )
+rotatePositions = changePositions nextPosition
+
 
 checkRestartGame :: MonadState LobbyData m => m Bool
 checkRestartGame = do
@@ -286,6 +292,18 @@ handlePlayerAction player LeaveLobby = do
             leaveLobby player
             broadcastLobby lobby
             sendPlayerResponse player
+    players <- Map.keys . dataPlayers <$> get
+    forM_ players sendPlayerResponse -- TODO nicht an alle schicken
+
+
+handlePlayerAction player (ChangePosition newPlayerPosition) = do
+    lobby <- lookupLobby player
+    oldPlayerPosition <- using lobby $ lookupPlayerPosition player
+    let newPosition position =
+            if      position == newPlayerPosition then oldPlayerPosition
+            else if position == oldPlayerPosition then newPlayerPosition
+            else                                       position
+    using lobby $ changePositions newPosition
     players <- Map.keys . dataPlayers <$> get
     forM_ players sendPlayerResponse -- TODO nicht an alle schicken
 

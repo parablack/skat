@@ -170,6 +170,7 @@ instance FromJSON ReceivePacket where
             "playhand"    -> MakeMove . PlayHand <$> (obj .: "hand" :: Parser Bool)
             "join"        -> JoinLobby <$> (obj .: "id" :: Parser Int) <*> (obj .: "position" :: Parser PlayerPosition)
             "leave"       -> return LeaveLobby
+            "changepos"   -> ChangePosition <$> (obj .: "position" :: Parser PlayerPosition)
             _             -> parseFail "Action unspecified."
 
     parseJSON _ = parseFail "Got no object."
