@@ -35,7 +35,7 @@ newtype Lobby = Lobby Int
 data PlayerData = PlayerData
   { dataName  :: String,
     dataLobby :: Maybe Lobby,
-    dataReply :: PlayerRepsonse -> IO ()
+    dataReply :: PlayerResponse -> IO ()
   }
 
 data PositionData = PositionData
@@ -137,7 +137,7 @@ lookupPlayerPosition player = do
 
 registerPlayer
     :: (MonadState ServerData m, MonadError String m)
-    => Player -> String -> (PlayerRepsonse -> IO ()) -> m ()
+    => Player -> String -> (PlayerResponse -> IO ()) -> m ()
 registerPlayer player name onReply = do
     players <- Map.keys . dataPlayers <$> get
     if elem player players then

@@ -9,7 +9,7 @@ module Definitions(Suit(..), Name(..), Card(..), Player(..),
      SkatMove(..),
      SkatScoringInformation(..),
      SkatGewinnstufe(..),
-     PlayerRepsonse(..),
+     PlayerResponse(..),
      deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn) where
 
 import Data.Maybe
@@ -162,7 +162,7 @@ data LobbyForPlayer = LobbyForPlayer
     lobbyPositions :: Map PlayerPosition String
   }
 
-data PlayerRepsonse
+data PlayerResponse
     = StateResponse SkatStateForPlayer
     | LobbyResponse [LobbyForPlayer]
 

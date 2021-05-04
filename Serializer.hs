@@ -121,7 +121,7 @@ instance ToJSON SkatStateForPlayer where
                 ]
                 ++ personalizedSkatState state player
 
-instance ToJSON PlayerRepsonse where
+instance ToJSON PlayerResponse where
 
     toJSON (StateResponse state@SkatStateForPlayer{}) = toJSON state
     toJSON (LobbyResponse lobbies) =
