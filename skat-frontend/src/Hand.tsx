@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "./Card";
-import { ICard, IState } from "./State";
+import { ICard, IGameState } from "./State";
 
 const ratio = 84.9667 / 122.567   // ratio cardWidth/cardHeight (including colored border)
 const overlap = 0.5;              // between 0 and 1, smaller = larger overlap
@@ -12,12 +12,12 @@ function nextPlayer(s: string) {
     return "So ein Mist aber auch...";
 }
 
-function isActive(state: IState, s: string) {
+function isActive(state: IGameState, s: string) {
     if (state.phase === "finished") return false;
     return state.turn === s
 }
 
-function createPlayerStruct(state: IState, pos: string) {
+function createPlayerStruct(state: IGameState, pos: string) {
     console.log(state)
     return {
         cards: state.cards[pos],
@@ -102,7 +102,7 @@ const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale 
                         transformOrigin: 'center center',
                         cursor: onClickCard ? "pointer" : "default",
                     }}>
-                        <Card card={card} onClick={() => {if (onClickCard) {onClickCard(card)}}}></Card>
+                        <Card card={card} onClick={() => { if (onClickCard) { onClickCard(card) } }}></Card>
                     </span>)
             })
         }
@@ -110,7 +110,7 @@ const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale 
 }
 
 
-export const YourHand: React.FC<{ state: IState, onClickCard: (card: ICard) => void}> = ({ state, onClickCard }) => {
+export const YourHand: React.FC<{ state: IGameState, onClickCard: (card: ICard) => void }> = ({ state, onClickCard }) => {
     let cards = state.you.cards;
     let you = createPlayerStruct(state, state.you.position);
 
@@ -133,7 +133,7 @@ export const YourHand: React.FC<{ state: IState, onClickCard: (card: ICard) => v
 
 
 
-export const OpponentHands: React.FC<{ state: IState }> = ({ state }) => {
+export const OpponentHands: React.FC<{ state: IGameState }> = ({ state }) => {
     let you = state.you.position;
     let left = createPlayerStruct(state, nextPlayer(you))
     let right = createPlayerStruct(state, nextPlayer(nextPlayer(you)))

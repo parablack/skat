@@ -62,13 +62,49 @@ export interface IGamePickingState extends ICommonPlayerState {
 }
 
 
-export interface IEmptyState extends ICommonPlayerState {
+export interface IEmptyState {
     phase: "empty"
 }
 
-export type IState = IFinishedState | IRunningState | IReizState | IHandPickingPhase | ISkatPickingPhase | IGamePickingState | IEmptyState
+export interface ILobby {
+    id: number,
+    name?: string,
+    names: { [player: string]: string },
+}
 
-export const EMPTY_STATE: IState =
-    { phase: "empty", names: {}, you: { "cards": [], "woncards": [], "position": "Vorhand" }, turn: "nobody", resign: 0, cards: { "Geber": [], "Vorhand": [], "Mittelhand": [] }, yourTurn: false }
+export interface ILobbyState {
+    phase: "lobby",
+    lobbies: ILobby[],
+}
+
+export type IGameState = IReizState
+    | IHandPickingPhase
+    | ISkatPickingPhase
+    | IGamePickingState
+    | IRunningState
+    | IFinishedState
+
+export type IState = IEmptyState
+    | ILobbyState
+    | IReizState
+    | IHandPickingPhase
+    | ISkatPickingPhase
+    | IGamePickingState
+    | IRunningState
+    | IFinishedState
+
+export function inLobby(state: IState): state is IGameState {
+    return (
+        state.phase === 'reizen' ||
+        state.phase === 'handpicking' ||
+        state.phase === 'skatpicking' ||
+        state.phase === 'gamepicking' ||
+        state.phase === 'running' ||
+        state.phase === 'finished'
+    )
+}
+
+export const EMPTY_STATE: IState = { phase: "empty" }
+    // {phase: 'lobby', lobbies: [ { id: 0, name: 'Die Erste', names: { Vorhand: 'Mflo3000' } } ]}
     // { "yourTurn": false, "gameMode": { kind: "farbspiel", color: "Spades" }, "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0, cards: { "Geber": [], "Vorhand": [], "Mittelhand": [] } }
     // { "yourTurn": true, "reizAnsagerTurn": true, "reizCurrentBid": 18, "phase": "reizen", "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }

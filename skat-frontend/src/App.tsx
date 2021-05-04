@@ -1,10 +1,11 @@
 import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
-import { EMPTY_STATE, ICard, IGamePickingState, IHandPickingPhase, IReizState, ISkatPickingPhase, Stich } from './State';
+import { EMPTY_STATE, ICard, ILobbyState, inLobby, Stich } from './State';
 import { Card, geileDeutschMap, geileFarbenMap, geileMap } from './Card';
 import { YourHand, OpponentHands } from './Hand';
 import { Scoreboard } from './Scoreboard';
+import { ReizInput, HandPickInput, SkatPickInput, GamePickInput } from './Reizen';
 
 
 const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
@@ -21,149 +22,42 @@ const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
   )} </div>
 }
 
-const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }) => {
-
-  let textInput = React.useRef<HTMLInputElement>(null);
-
-  if (!state.yourTurn) {
-    return (
-      <div style={{
-        textAlign: 'center',
-        verticalAlign: 'center'
-      }}>
-        Es wurde {state.reizCurrentBid === 17 ? <>noch nix</> : state.reizCurrentBid} geboten.
-      </div>
-    )
-  }
-
-  if (state.reizAnsagerTurn) {
-    return (
-      <div>
-        Du darfst
-        <br />
-        <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
-          <input ref={textInput}
-            style={{ textAlign: "center" }}
-            type="number"
-            min={state.reizCurrentBid}
-            max="264"
-            size={5}
-            defaultValue={state.reizCurrentBid + 1}
-          />
-          <button className="unicode-button" onClick={() => {
-            ws.send(JSON.stringify({
-              action: "reizbid",
-              reizbid: parseInt(textInput!.current!.value),
-            }))
-
-          }}>&#x1F4C8;</button>
-        oder
-        <button className="unicode-button" onClick={() => {
-            ws.send(JSON.stringify({
-              action: "reizweg",
-            }))
-          }}>&#x1F6AA;</button>
-        </div>
-      </div>
-    )
-  } else {
-    return (
-      <div>
-        Es wurde {state.reizCurrentBid} geboten:
-        <br />
-        <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
-          <button className="unicode-button" onClick={() => {
-            ws.send(JSON.stringify({
-              action: "reizanswer", value: true
-            }))
-          }}>&#x1F44D;</button>
-                oder
-        <button className="unicode-button" onClick={() => {
-            ws.send(JSON.stringify({
-              action: "reizanswer", value: false
-            }))
-          }}>&#x1F44E;</button>
-        </div>
-      </div>
-    )
-  }
+export const LobbyInput: React.FC<{ ws: WebSocket, state: ILobbyState }> = ({ ws, state }) => {
+  return <>
+    Lobbies:
+    <table style={{ border: '1px solid black' }}>
+      <thead>
+        <tr>
+          <th>Lobby</th>
+          <th>Vorhand</th>
+          <th>Mittelhand</th>
+          <th>Geber</th>
+        </tr>
+      </thead>
+      <tbody>
+        {state.lobbies.map((lobby, index) => <tr key={index}>
+          <td>{lobby.name || lobby.id}</td>
+          {["Vorhand", "Mittelhand", "Geber"].map(pos => <td key={pos}>
+            {lobby.names[pos] ? (
+              <span>{lobby.names[pos]}</span>
+            ) : (
+              <button onClick={() => {
+                ws.send(JSON.stringify({ action: "join", id: lobby.id, position: pos }))
+              }}>Mein Platz!</button>
+            )}
+          </td>)}
+        </tr>)}
+      </tbody>
+    </table>
+  </>
 }
 
-
-const HandPickInput: React.FC<{ ws: WebSocket, state: IHandPickingPhase }> = ({ ws, state }) => {
-  if (!state.yourTurn)
-    return <h1>{state.names[state.turn]} wählt Hand/nicht Hand ...</h1>
-
-  return (
-    <div>
-      <button onClick={() => {
-        ws.send(JSON.stringify({
-          action: "playhand",
-          hand: true,
-        }))
-      }}>Hand Spielen</button>
-      {" oder "}
-      <button onClick={() => {
-        ws.send(JSON.stringify({
-          action: "playhand",
-          hand: false,
-        }))
-      }}>Hand nicht Spielen</button>
-    </div>
-  )
-}
-
-const GamePickInput: React.FC<{ ws: WebSocket, state: IGamePickingState }> = ({ ws, state }) => {
-  let dropdown = React.useRef<HTMLSelectElement>(null);
-  let dropdown2 = React.useRef<HTMLSelectElement>(null);
-
-  if (!state.yourTurn)
-    return <h1>{state.names[state.turn]} wählt das Spiel ...</h1>
-
-  return (
-    <div>
-      <label>Was willst du spielen?</label>
-      <br />
-      <select ref={dropdown} defaultValue="ColorDiamonds">
-        <option value="ColorDiamonds">♦</option>
-        <option value="ColorHearts">♥</option>
-        <option value="ColorSpades">♠</option>
-        <option value="ColorClubs">♣</option>
-        <option value="Null">Null</option>
-        <option value="Grand">Grand</option>
-      </select>
-      <select ref={dropdown2} defaultValue="Normal">
-        <option value="Normal">Normal</option>
-        <option value="Schneider">Schneider</option>
-        <option value="Schwarz">Schwarz</option>
-        <option value="Ouvert">Ouvert</option>
-      </select>
-      <button onClick={() => {
-        ws.send(JSON.stringify({
-          action: "playvariant",
-          variant: dropdown!.current!.value,
-          angesagt: dropdown2!.current!.value,
-        }))
-      }}>Spielen</button>
-    </div>
-  )
-}
-
-
-
-const SkatPickInput: React.FC<{ ws: WebSocket, state: ISkatPickingPhase }> = ({ ws, state }) => {
-  if (!state.yourTurn)
-    return <h1>{state.names[state.turn]} wählt den Skat ...</h1>
-  return (
-    <h1>Wähle deinen Skat ...</h1>
-  )
-}
 
 export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   const [state, setState] = useState(EMPTY_STATE)
   // const [nickname, setNickname] = useState(undefined)
 
-  let resolveNickname = (pos: string) => state.names[pos] || pos
+  let resolveNickname = (pos: string) => inLobby(state) ? state.names[pos] || pos : pos
 
 
   useEffect(() => {
@@ -198,6 +92,10 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     sieSpielen = "Nix mehr, das Spiel ist nämlich vorbei!"
   } else if (state.phase === "empty") {
     sieSpielen = "Noch nichts"
+  } else if (state.phase === "handpicking") {
+    sieSpielen = "Hand wählen ..."
+  } else if (state.phase === "lobby") {
+    sieSpielen = "Lobbyauswahl"
   }
 
   return (
@@ -207,7 +105,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
       <section style={{
         backgroundColor: '#282c34',
         display: 'flex',
-        flexDirection: 'row',
+        flexDirection: inLobby(state) ? 'row' : 'column-reverse',
         alignItems: 'center',
         justifyContent: 'space-evenly',
         fontSize: 'calc(10px + 2vmin)',
@@ -218,14 +116,16 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-evenly',
+          justifyContent: inLobby(state) ? 'space-evenly' : 'normal',
           alignItems: 'center',
           height: '100%'
         }}>
 
-          <span style={{ margin: '.4em' }}>
-            <OpponentHands state={state} />
-          </span>
+          {inLobby(state) ? (
+            <span style={{ margin: '.4em' }}>
+              <OpponentHands state={state} />
+            </span>
+          ) : null}
 
           <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin', display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
             {state.phase === "empty" ? <h1>Server ist down <button className="unicode-button" onClick={() => window.location.reload()}>&#x1F62D;</button></h1> : null}
@@ -234,19 +134,22 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             {state.phase === "skatpicking" ? <SkatPickInput ws={ws} state={state} /> : null}
             {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
             {state.phase === "running" || state.phase === "finished" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
+            {state.phase === "lobby" ? <LobbyInput ws={ws} state={state} /> : null}
           </div>
 
           {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
 
-          <span style={{ margin: '.4em' }}>
-            <YourHand state={state} onClickCard={card => {
-              console.log("clicked card", card)
-              ws.send(JSON.stringify({
-                action: "playcard",
-                card,
-              }))
-            }} />
-          </span>
+          {inLobby(state) ? (
+            <span style={{ margin: '.4em' }}>
+              <YourHand state={state} onClickCard={card => {
+                console.log("clicked card", card)
+                ws.send(JSON.stringify({
+                  action: "playcard",
+                  card,
+                }))
+              }} />
+            </span>
+          ) : null}
 
         </div>
 
@@ -273,45 +176,47 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                     </span>{' '}
                     {geileDeutschMap[state.gamemode.color]}</>
                     : state.gamemode.kind}
-                    {' '}
-                    {state.scoring.hand ? "Hand" : " "}{' '}{state.scoring.angesagt}
+                  {' '}
+                  {state.scoring.hand ? "Hand" : " "}{' '}{state.scoring.angesagt}
                 </span>
                 : <span>Heute spielen Sie: {sieSpielen}</span>}
             </small>
 
           </header>
 
-          <div>
-            Name ändern <br />
-            <button className="unicode-button" onClick={(_) => {
-              let name = prompt("Enter your name")
-              if (name) {
-                ws.send(JSON.stringify({
-                  action: "setname",
-                  name
-                }))
-                localStorage.setItem("nickname", name)
+          {inLobby(state) ? <>
+            <div>
+              Name ändern <br />
+              <button className="unicode-button" onClick={(_) => {
+                let name = prompt("Enter your name")
+                if (name) {
+                  ws.send(JSON.stringify({
+                    action: "setname",
+                    name
+                  }))
+                  localStorage.setItem("nickname", name)
+                }
               }
-            }
-            }>&#x270F;&#xFE0F;
+              }>&#x270F;&#xFE0F;
               </button>
-          </div>
+            </div>
 
-          <div>
-            Mit offenen Karten spielen
-            <br />
-            <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>
-              &#x1F440;
-            </button>
-          </div>
+            <div>
+              Mit offenen Karten spielen
+              <br />
+              <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>
+                &#x1F440;
+              </button>
+            </div>
 
-          <div className="resign">
-            Nächste Runde ({state.resign} / {Object.entries(state.names).length})
-            <br />
-            <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
-              &#x1F1EB;&#x1F1F7;
-            </button>
-          </div>
+            <div className="resign">
+              Nächste Runde ({state.resign} / {Object.entries(state.names).length})
+              <br />
+              <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
+                &#x1F1EB;&#x1F1F7;
+              </button>
+            </div>
+          </> : null}
         </div>
       </section>
     </div>
