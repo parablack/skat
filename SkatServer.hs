@@ -157,6 +157,9 @@ unregisterPlayer player = do
             leaveLobby player
             broadcastLobby lobby
     delete player
+    players <- Map.keys . dataPlayers <$> get
+    forM_ players sendPlayerResponse -- TODO nicht an alle schicken
+
 
 registerLobby
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
@@ -257,6 +260,8 @@ handlePlayerAction client (JoinLobby uid position) = do
     let lobby = Lobby uid
     enterLobby client lobby position
     broadcastLobby lobby
+    players <- Map.keys . dataPlayers <$> get
+    forM_ players sendPlayerResponse -- TODO nicht an alle schicken
 
 handlePlayerAction player LeaveLobby = do
     maybeLobby <- dataLobby <$> lookup player
@@ -266,6 +271,9 @@ handlePlayerAction player LeaveLobby = do
             leaveLobby player
             broadcastLobby lobby
             sendPlayerResponse player
+    players <- Map.keys . dataPlayers <$> get
+    forM_ players sendPlayerResponse -- TODO nicht an alle schicken
+
 
 lobbyNameMap
     :: (MonadState ServerData m, MonadError String m)

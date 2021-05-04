@@ -125,7 +125,7 @@ instance ToJSON LobbyForPlayer where
     toJSON LobbyForPlayer{lobbyId=id, lobbyName=name, lobbyPositions=pos} =
         object $ [  "id" .= id,
                     "name" .= name,
-                    "names" .= pos
+                    "names" .= Data.Map.mapKeys show pos
                  ]
 
 instance ToJSON PlayerResponse where
@@ -133,7 +133,7 @@ instance ToJSON PlayerResponse where
     toJSON (LobbyResponse lobbies) =
         object $ [
             "phase" .= pack "lobby",
-            "lobbies" .= lobbies
+            "lobbies" .=  lobbies
         ]
         {--
         id: num,

@@ -117,7 +117,7 @@ nullCardLE (Card x suit) (Card y suit')
     | otherwise     = False
 
 nullWinner :: PlayerPosition -> Map PlayerPosition [Card] -> Bool
-nullWinner singlePlayer scores = (scores ! singlePlayer) == []
+nullWinner singlePlayer scores = length (scores ! singlePlayer) <= 3
 
 nullValue :: SkatScoringInformation -> Int
 nullValue SkatScoringInformation{isHand=True, angesagteStufe = Ouvert} = 59
