@@ -54,8 +54,8 @@ main = do
   hSetBuffering stdout LineBuffering
   putStrLn "Listening on 0.0.0.0:8080"
   err <- flip evalStateT emptyServerData $ runExceptT $ do
-            registerLobby (Lobby "L1")
-            registerLobby (Lobby "L2")
+            registerLobby (Lobby 1) "Lobbyname 1"
+            registerLobby (Lobby 2) "Lobbyname 2"
             runWebSockServer defaultServerConfig handleEvent
   case err of
       Left message -> println $ "Server terminated because of error: " ++ message

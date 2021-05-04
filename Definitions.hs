@@ -9,6 +9,7 @@ module Definitions(Suit(..), Name(..), Card(..), Player(..),
      SkatMove(..),
      SkatScoringInformation(..),
      SkatGewinnstufe(..),
+     PlayerRepsonse(..),
      deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn) where
 
 import Data.Maybe
@@ -155,6 +156,16 @@ data SkatStateForPlayer = SkatStateForPlayer {
     showingCards :: [PlayerPosition]
 }
 
+data LobbyForPlayer = LobbyForPlayer
+  { lobbyId        :: Int,
+    lobbyName      :: String,
+    lobbyPositions :: Map PlayerPosition String
+  }
+
+data PlayerRepsonse
+    = StateResponse SkatStateForPlayer
+    | LobbyResponse [LobbyForPlayer]
+
 -- XY: X sagt, Y hört
 data ReizStateMachine = MittelhandVorhand | MittelhandGeber | GeberVorhand | VorhandNix deriving(Eq, Show)
 activeReizPlayer :: ReizStateMachine -> PlayerPosition
@@ -187,8 +198,8 @@ data ReceivePacket
     | SetName String
     | ShowCards
     | Resign
-    | LeaveLobby String -- TODO lobby instead of string
-    | JoinLobby String PlayerPosition
+    | LeaveLobby
+    | JoinLobby Int PlayerPosition
     deriving (Show, Eq)
 
 -- For Ramsch, grand

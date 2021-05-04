@@ -29,13 +29,13 @@ import Util
 newtype Player = Player String
     deriving (Show, Eq, Ord)
 
-newtype Lobby = Lobby String
+newtype Lobby = Lobby Int
     deriving (Show, Eq, Ord)
 
 data PlayerData = PlayerData
   { dataName  :: String,
     dataLobby :: Maybe Lobby,
-    dataReply :: SkatStateForPlayer -> IO ()
+    dataReply :: PlayerRepsonse -> IO ()
   }
 
 data PositionData = PositionData
@@ -137,7 +137,7 @@ lookupPlayerPosition player = do
 
 registerPlayer
     :: (MonadState ServerData m, MonadError String m)
-    => Player -> String -> (SkatStateForPlayer -> IO ()) -> m ()
+    => Player -> String -> (PlayerRepsonse -> IO ()) -> m ()
 registerPlayer player name onReply = do
     players <- Map.keys . dataPlayers <$> get
     if elem player players then
@@ -146,17 +146,21 @@ registerPlayer player name onReply = do
         insert player (PlayerData name Nothing onReply)
 
 unregisterPlayer
-    :: (MonadState ServerData m, MonadError String m)
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
     => Player -> m ()
 unregisterPlayer player = do
     record <- lookup player
-    when (isJust $ dataLobby record) $ leaveLobby player
+    case dataLobby record of
+        Nothing -> return ()
+        Just lobby -> do
+            leaveLobby player
+            broadcastState lobby
     delete player
 
 registerLobby
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Lobby -> m ()
-registerLobby lobby = do
+    => Lobby -> String -> m ()
+registerLobby lobby name = do
     lobbies <- Map.keys . dataLobbies <$> get
     if elem lobby lobbies then
         throwError $ (show lobby) ++ " already registered!"
@@ -249,8 +253,17 @@ handlePlayerAction player ShowCards = do
 --    throwError "ShowCards not implemented here" -- TODO
 
 handlePlayerAction client (JoinLobby uid position) = do
-    enterLobby client (Lobby uid) position
-    broadcastState (Lobby uid)
+    let lobby = Lobby uid
+    enterLobby client lobby position
+    broadcastState lobby
+
+handlePlayerAction player LeaveLobby = do
+    maybeLobby <- dataLobby <$> lookup player
+    case maybeLobby of
+        Nothing -> throwError $ (show player) ++ "is not in a lobby!"
+        Just lobby -> do
+            leaveLobby player
+            broadcastState lobby
 
 lobbyNameMap
     :: (MonadState ServerData m, MonadError String m)
@@ -280,7 +293,7 @@ broadcastState lobby = do
             Just player -> do
                 playerRecord <- lookup player
                 (liftIO . dataReply playerRecord)
-                    (SkatStateForPlayer position skatState nameMap numResigned showingCards)
+                    (StateResponse (SkatStateForPlayer position skatState nameMap numResigned showingCards))
         )
 
 freePositions
@@ -300,3 +313,8 @@ joinFreeLobby player = do
             enterLobby player lobby position
             broadcastState lobby
         _ -> throwError "No free lobby found!"
+
+
+--changePositions
+--    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+--    => Player -> m ()

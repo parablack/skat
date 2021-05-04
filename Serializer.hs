@@ -121,6 +121,18 @@ instance ToJSON SkatStateForPlayer where
                 ]
                 ++ personalizedSkatState state player
 
+instance ToJSON PlayerRepsonse where
+
+    toJSON (StateResponse state@SkatStateForPlayer{}) = toJSON state
+    toJSON (LobbyResponse lobbies) =
+        object $ [
+            --"phase" .= "lobby",
+            --"lobbies" .= []
+        ]
+        {--
+        id: num,
+        name: string,
+        names: pos -> spieler--}
 
 
 instance FromJSON Card where
@@ -150,6 +162,8 @@ instance FromJSON ReceivePacket where
             "reizweg"     -> return . MakeMove $ ReizBid Weg
             "reizanswer"  -> MakeMove . ReizAnswer <$> (obj .: "value" :: Parser Bool)
             "playhand"    -> MakeMove . PlayHand <$> (obj .: "hand" :: Parser Bool)
+            "join"        -> JoinLobby <$> (obj .: "id" :: Parser Int) <*> (obj .: "position" :: Parser PlayerPosition)
+            "leave"       -> return LeaveLobby
             _             -> parseFail "Action unspecified."
 
     parseJSON _ = parseFail "Got no object."
