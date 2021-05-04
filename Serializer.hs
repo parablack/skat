@@ -121,13 +121,19 @@ instance ToJSON SkatStateForPlayer where
                 ]
                 ++ personalizedSkatState state player
 
-instance ToJSON PlayerResponse where
+instance ToJSON LobbyForPlayer where
+    toJSON LobbyForPlayer{lobbyId=id, lobbyName=name, lobbyPositions=pos} =
+        object $ [  "id" .= id,
+                    "name" .= name,
+                    "names" .= pos
+                 ]
 
+instance ToJSON PlayerResponse where
     toJSON (StateResponse state@SkatStateForPlayer{}) = toJSON state
     toJSON (LobbyResponse lobbies) =
         object $ [
-            --"phase" .= "lobby",
-            --"lobbies" .= []
+            "phase" .= pack "lobby",
+            "lobbies" .= lobbies
         ]
         {--
         id: num,

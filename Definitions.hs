@@ -10,6 +10,7 @@ module Definitions(Suit(..), Name(..), Card(..), Player(..),
      SkatScoringInformation(..),
      SkatGewinnstufe(..),
      PlayerResponse(..),
+     LobbyForPlayer(..),
      deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn) where
 
 import Data.Maybe
