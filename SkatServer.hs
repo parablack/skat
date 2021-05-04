@@ -33,7 +33,7 @@ newtype Lobby = Lobby Int
     deriving (Show, Eq, Ord)
 
 data PlayerData = PlayerData
-  { dataName  :: String,
+  { dataPlayerName  :: String,
     dataLobby :: Maybe Lobby,
     dataReply :: PlayerResponse -> IO ()
   }
@@ -45,7 +45,8 @@ data PositionData = PositionData
 
 data LobbyData = LobbyData
   { dataPositions :: Map.Map PlayerPosition PositionData,
-    dataSkatState :: SkatState
+    dataSkatState :: SkatState,
+    dataLobbyName :: String
   }
 
 data ServerData = ServerData
@@ -63,7 +64,8 @@ emptyLobbyData = LobbyData
         (Vorhand,    emptyPositionData),
         (Mittelhand, emptyPositionData)
         ],
-    dataSkatState = initialStateFromDeck deck
+    dataSkatState = initialStateFromDeck deck,
+    dataLobbyName = "[No Name]"
   }
 
 allPlayerPositions = [Geber, Vorhand, Mittelhand]
@@ -169,7 +171,7 @@ registerLobby lobby name = do
     if elem lobby lobbies then
         throwError $ (show lobby) ++ " already registered!"
     else do
-        insert lobby emptyLobbyData
+        insert lobby emptyLobbyData{ dataLobbyName = name }
         using lobby newGame
 
 enterLobby
@@ -210,6 +212,17 @@ newGame = do
             adjust position (\record -> record{ dataResigned  = False })
         )
 
+nextPosition :: PlayerPosition -> PlayerPosition
+nextPosition Geber      = Mittelhand
+nextPosition Mittelhand = Vorhand
+nextPosition Vorhand    = Geber
+
+rotatePositions :: MonadState LobbyData m => m ()
+rotatePositions =
+    modify (\record ->
+        record{ dataPositions = Map.mapKeys nextPosition (dataPositions record) }
+        )
+
 checkRestartGame :: MonadState LobbyData m => m Bool
 checkRestartGame = do
     records <- Map.elems . dataPositions <$> get
@@ -231,7 +244,7 @@ handlePlayerAction player (MakeMove move) = do
 
 handlePlayerAction player (SetName name) = do
     record <- lookup player
-    insert player record{ dataName = name }
+    insert player record{ dataPlayerName = name }
     case dataLobby record of
         Just lobby -> broadcastLobby lobby
         Nothing    -> return ()
@@ -242,7 +255,9 @@ handlePlayerAction player Resign = do
         position <- lookupPlayerPosition player
         adjust position (\record -> record {dataResigned = True})
         needsRestart <- checkRestartGame
-        when needsRestart newGame
+        when needsRestart $ do
+            newGame
+            rotatePositions
     broadcastLobby lobby
 
 handlePlayerAction player ShowCards = do
@@ -283,7 +298,7 @@ lobbyNameMap lobby = do
         catMaybes . map dataPlayer . Map.elems . dataPositions <$> get
     positionNames <- using lobby $
         map show <$> mapM lookupPlayerPosition players
-    playerNames <- map dataName <$> mapM lookup players
+    playerNames <- map dataPlayerName <$> mapM lookup players
     return $ Map.fromList $ zip positionNames playerNames
 
 
@@ -298,11 +313,12 @@ buildLobbyForPlayer lobby@(Lobby num) = do
                     Nothing -> return Nothing
                     Just player -> do
                         record <- lookup player
-                        return $ Just (position, dataName record)
+                        return $ Just (position, dataPlayerName record)
             )
+    lobbyRecord <- lookup lobby
     return $ LobbyForPlayer {
         lobbyId        = num,
-        lobbyName      = "Lobby " ++ (show num),
+        lobbyName      = (dataLobbyName lobbyRecord),
         lobbyPositions = (Map.fromList . catMaybes $ maybePosAssocs)
     }
 
