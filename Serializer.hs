@@ -3,16 +3,13 @@
 
 module Serializer where
 
-
-import Control.Exception
 import Data.List
-import Definitions
+import Skat.Definitions
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Text
 import qualified Data.Map
-import qualified Data.ByteString.Lazy as B
-import Skat
+import Skat.Skat
 
 instance ToJSON Card where
     toJSON (Card name suit) = object ["suit" .= suit, "name" .= name]
@@ -50,7 +47,7 @@ personalizedSkatState state@SkatPickingPhase{} player = [
                 "cardsToDiscard" .=
                     (case singlePlayer state of
                     Nothing -> error "Unreachable state: Nobody's turn (no single player in skat picking)"
-                    Just x -> (Data.List.length . playerCards) (playerFromPos state player) - 10
+                    Just _ -> (Data.List.length . playerCards) (playerFromPos state player) - 10
                     )
             ]
 personalizedSkatState state@GamePickingPhase{} player = [
@@ -74,14 +71,14 @@ personalizedSkatState state@RunningPhase{} player = [
                 "currentStich" .= Data.List.reverse (currentStich state),
                 "lastStich" .= case playedStiche state of
                     [] -> []
-                    (x:xs) -> Data.List.reverse x,
+                    (x:_) -> Data.List.reverse x,
                 "yourTurn" .=  (player == turn state),
                 "singlePlayer" .= (case singlePlayer state of
                     Nothing -> "nobody"
                     Just x -> toJSON x),
                 "turn" .= turn state
             ]
-personalizedSkatState state@GameFinishedState{} player = [
+personalizedSkatState state@GameFinishedState{} _ = [
                 "phase" .= pack "finished",
                 "currentStich" .= Data.List.reverse (lastStich state),
                 "yourTurn" .= False,

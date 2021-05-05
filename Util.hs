@@ -36,4 +36,5 @@ assert :: Bool -> String -> Either String ()
 assert True _ = return ()
 assert False s = throwError s
 
+slice :: Int -> Int -> [a] -> [a]
 slice start end = take (end - start + 1) . drop start

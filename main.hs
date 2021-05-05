@@ -1,24 +1,15 @@
 {-# LANGUAGE ConstraintKinds, FlexibleContexts #-}
 
-import Control.Concurrent
-import Control.Concurrent.Chan
-import Control.Monad
 import Control.Monad.Except
-import Control.Monad.IO.Class
 import Control.Monad.State.Lazy
-import Data.Aeson
-import Data.List as List
-import Data.Map  as Map
-import Data.Maybe
 import Control.Monad.Trans.Maybe
+import Data.Aeson
 import Data.Text
 import Data.Text.Encoding
 import System.IO
 
-import Definitions
-import Serializer
-import Skat
-import SkatServer
+import Serializer()
+import Skat.Server
 import Util
 import WebSockServer
 
@@ -30,17 +21,17 @@ replyError client err =
 
 handleEvent :: Event -> ExceptT String (StateT ServerData IO) ()
 handleEvent (Connect client) = do
-    let player = SkatServer.Player (show client)
+    let player = Skat.Server.Player (show client)
     registerPlayer player "Anon" (reply client . encode)
     println $ (show player) ++ " added!"
 
 handleEvent (Disconnect client cause) = do
-  let player = SkatServer.Player (show client)
+  let player = Skat.Server.Player (show client)
   unregisterPlayer player
   println $ (show player) ++ " removed! (" ++ show cause ++ ")"
 
 handleEvent (Message client message) = do
-    let player = SkatServer.Player (show client)
+    let player = Skat.Server.Player (show client)
     let maybeTAction = MaybeT . return . decodeStrict . encodeUtf8 . pack $ message
     result <- runExceptT $ do
         action <- maybeToExceptT "Couldn't deserialize action!" maybeTAction
@@ -49,6 +40,7 @@ handleEvent (Message client message) = do
       Left err -> replyError client err
       Right _  -> return ()
 
+main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
   putStrLn "Listening on 0.0.0.0:8080"

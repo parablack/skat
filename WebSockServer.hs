@@ -9,8 +9,6 @@ module WebSockServer (
 ) where
 
 import Control.Concurrent
-import Control.Concurrent.Chan
-import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
@@ -46,13 +44,13 @@ data ServerConfig = ServerConfig
 
 reply :: (MonadIO m, WebSocketsData a) => Client -> a -> m ()
 reply client message = do
-  liftIO . try $ sendTextData (clientConn client) message
+  _ <- liftIO . try $ sendTextData (clientConn client) message
     :: MonadIO m => m (Either ConnectionException ())
   return ()
 
 disconnect :: MonadIO m => Client -> m ()
 disconnect client = do
-  liftIO . try $ sendClose (clientConn client) Data.Text.empty
+  _ <- liftIO . try $ sendClose (clientConn client) Data.Text.empty
     :: MonadIO m => m (Either ConnectionException ())
   return ()
 
@@ -102,6 +100,6 @@ runWebSockServer config handleEvent = do
   availIds <- liftIO $ newMVar [1 .. n]
 
   let run = runServer (configAddress config) (configPort config)
-  liftIO . forkIO . run $ acceptClient availIds eventQ
+  _ <- liftIO . forkIO . run $ acceptClient availIds eventQ
 
   forever $ (liftIO . readChan) eventQ >>= handleEvent
