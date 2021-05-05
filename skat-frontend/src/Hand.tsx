@@ -169,8 +169,8 @@ export const OpponentHands: React.FC<{
             flexDirection: "column",
             color: right.active ? "red" : "white"
         }}>
-            {left.name
-                ? <div>{left.name}</div>
+            {right.name
+                ? <div>{right.name}</div>
                 : <button onClick={() => {
                     onChangePos(right.position)
                   }}>Mein Platz!</button>
