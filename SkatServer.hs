@@ -154,10 +154,8 @@ unregisterPlayer
 unregisterPlayer player = do
     record <- lookup player
     case dataLobby record of
-        Nothing -> return ()
-        Just lobby -> do
-            leaveLobby player
-            broadcastLobby lobby
+        Nothing    -> return ()
+        Just lobby -> handlePlayerAction player LeaveLobby
     delete player
     players <- Map.keys . dataPlayers <$> get
     forM_ players sendPlayerResponse -- TODO nicht an alle schicken

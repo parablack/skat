@@ -72,6 +72,11 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
       }
     }
 
+    ws.onclose = () => {
+        console.log("ws closed")
+        setState(EMPTY_STATE)
+    }
+
     return () => ws.close()
   }, [ws])
 
