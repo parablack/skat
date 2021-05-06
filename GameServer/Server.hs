@@ -1,10 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts #-}
 
-module Skat.Server (
-    Player(..),
-    Lobby(..),
-    ServerData,
-    emptyServerData,
+module GameServer.Server (
     registerLobby,
     registerPlayer,
     unregisterPlayer,
@@ -14,7 +10,7 @@ module Skat.Server (
 
 import Control.Monad
 import Control.Monad.Except
-import Control.Monad.State.Lazy (MonadState, get, modify, StateT, runStateT)
+import Control.Monad.State.Lazy (MonadState, get, modify)
 import Data.Maybe
 import qualified Data.List as List
 import qualified Data.Map  as Map
@@ -22,104 +18,9 @@ import Prelude hiding (lookup)
 
 import Skat.Definitions hiding (Player, position, result, players, playerNames)
 import Skat.Skat
+import GameServer.Definitions
 import Util
 
-newtype Player = Player String
-    deriving (Show, Eq, Ord)
-
-newtype Lobby = Lobby Int
-    deriving (Show, Eq, Ord)
-
-data PlayerData = PlayerData
-  { dataPlayerName  :: String,
-    dataLobby :: Maybe Lobby,
-    dataReply :: PlayerResponse -> IO ()
-  }
-
-data PositionData = PositionData
-  { dataPlayer    :: Maybe Player,
-    dataResigned  :: Bool
-  }
-
-data LobbyData = LobbyData
-  { dataPositions :: Map.Map PlayerPosition PositionData,
-    dataSkatState :: SkatState,
-    dataLobbyName :: String
-  }
-
-data ServerData = ServerData
-  { dataPlayers :: Map.Map Player PlayerData,
-    dataLobbies :: Map.Map Lobby LobbyData
-  }
-
-emptyPositionData :: PositionData
-emptyPositionData = PositionData Nothing False
-
-emptyLobbyData :: LobbyData
-emptyLobbyData = LobbyData
-  { dataPositions = Map.fromList [
-        (Geber,      emptyPositionData),
-        (Vorhand,    emptyPositionData),
-        (Mittelhand, emptyPositionData)
-        ],
-    dataSkatState = initialStateFromDeck deck,
-    dataLobbyName = "[No Name]"
-  }
-
-allPlayerPositions :: [PlayerPosition]
-allPlayerPositions = [Geber, Vorhand, Mittelhand]
-
-emptyServerData :: ServerData
-emptyServerData = ServerData Map.empty Map.empty
-
-class (Show i, Ord i) => ServerRecord i s r | i -> s, i -> r where
-    extractMap :: s -> Map.Map i r
-    modifyMap :: MonadState s m => (Map.Map i r -> Map.Map i r) -> m ()
-
-    lookup :: (MonadState s m, MonadError String m) => i -> m r
-    lookup key = do
-        result <- Map.lookup key . extractMap <$> get
-        case result of
-            Just record -> return record
-            Nothing     -> throwError $ (show key) ++ " not found!"
-
-    insert :: MonadState s m => i -> r -> m ()
-    insert key record = modifyMap $ Map.insert key record
-
-    delete :: MonadState s m => i -> m ()
-    delete key = modifyMap $ Map.delete key
-
-    adjust :: MonadState s m => i -> (r -> r) -> m ()
-    adjust key modifier = modifyMap $ Map.adjust modifier key
-
-    using :: (MonadState s m, MonadError String m)
-          => i -> ExceptT String (StateT r m) a -> m a
-    using key monad = do
-        record <- lookup key
-        (err, newRecord) <- runStateT (runExceptT monad) record
-        case err of
-            Left message -> throwError message
-            Right result -> insert key newRecord >> return result
-
-
-instance ServerRecord Player ServerData PlayerData where
-    extractMap = dataPlayers
-    modifyMap modifier = modify (\server ->
-        server{ dataPlayers = modifier (dataPlayers server) })
-
-instance ServerRecord Lobby ServerData LobbyData where
-    extractMap = dataLobbies
-    modifyMap modifier = modify (\server ->
-        server{ dataLobbies = modifier (dataLobbies server) })
-
-instance ServerRecord PlayerPosition LobbyData PositionData where
-    extractMap = dataPositions
-    modifyMap modifier = modify (\lobby ->
-        lobby{ dataPositions = modifier (dataPositions lobby) })
-
-
-maybeToError :: MonadError String m => String -> Maybe a -> m a
-maybeToError message = maybe (throwError message) return
 
 lookupLobby
     :: (MonadState ServerData m, MonadError String m) => Player -> m Lobby
@@ -381,8 +282,3 @@ joinFreeLobby player = do
             enterLobby player lobby position
             broadcastLobby lobby
         _ -> throwError "No free lobby found!"
-
-
---changePositions
---    :: (MonadState ServerData m, MonadError String m, MonadIO m)
---    => Player -> m ()

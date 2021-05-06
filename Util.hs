@@ -1,9 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Util (
     println,
     maxElem,
     shuffle,
     assert,
-    slice
+    slice,
+    maybeToError
 ) where
 
 import Control.Monad.IO.Class
@@ -38,3 +41,6 @@ assert False s = throwError s
 
 slice :: Int -> Int -> [a] -> [a]
 slice start end = take (end - start + 1) . drop start
+
+maybeToError :: MonadError String m => String -> Maybe a -> m a
+maybeToError message = maybe (throwError message) return

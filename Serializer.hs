@@ -5,6 +5,7 @@ module Serializer where
 
 import Data.List
 import Skat.Definitions
+import GameServer.Definitions hiding (Player)
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Text

@@ -9,7 +9,8 @@ import Data.Text.Encoding
 import System.IO
 
 import Serializer()
-import Skat.Server
+import GameServer.Definitions
+import GameServer.Server
 import Util
 import WebSockServer
 
@@ -21,17 +22,17 @@ replyError client err =
 
 handleEvent :: Event -> ExceptT String (StateT ServerData IO) ()
 handleEvent (Connect client) = do
-    let player = Skat.Server.Player (show client)
+    let player = Player (show client)
     registerPlayer player "Anon" (reply client . encode)
     println $ (show player) ++ " added!"
 
 handleEvent (Disconnect client cause) = do
-  let player = Skat.Server.Player (show client)
+  let player = Player (show client)
   unregisterPlayer player
   println $ (show player) ++ " removed! (" ++ show cause ++ ")"
 
 handleEvent (Message client message) = do
-    let player = Skat.Server.Player (show client)
+    let player = Player (show client)
     let maybeTAction = MaybeT . return . decodeStrict . encodeUtf8 . pack $ message
     result <- runExceptT $ do
         action <- maybeToExceptT "Couldn't deserialize action!" maybeTAction

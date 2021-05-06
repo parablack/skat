@@ -5,14 +5,13 @@
 module Skat.Definitions(
      Suit(..), Name(..), Card(..), Player(..),
      Stich, Reizwert(..), GameMode(..), Hopefully,
-     PlayerPosition(..), SkatState(..), SkatStateForPlayer(..), ReceivePacket(..),
+     PlayerPosition(..), SkatState(..),
      ReizStateMachine(..),
      SkatMove(..),
      SkatScoringInformation(..),
      SkatGewinnstufe(..),
-     PlayerResponse(..),
-     LobbyForPlayer(..),
-     deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn
+     deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn,
+     allPlayerPositions
 ) where
 
 import Data.Maybe
@@ -107,13 +106,20 @@ data SkatScoringInformation = SkatScoringInformation {
     initialCards :: [Card]
 } deriving (Eq, Show)
 
-data SkatGewinnstufe = Normal | Schneider | Schwarz | Ouvert deriving (Eq, Show, Generic, FromJSON, ToJSON)
+data SkatGewinnstufe = Normal | Schneider | Schwarz | Ouvert
+    deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
-data PlayerPosition = Geber | Vorhand | Mittelhand deriving (Eq, Show, Ord, Generic, FromJSON, ToJSON, ToJSONKey)
+data PlayerPosition = Geber | Vorhand | Mittelhand
+    deriving (Eq, Show, Ord, Generic, FromJSON, ToJSON, ToJSONKey)
+
 nextPos :: PlayerPosition -> PlayerPosition
 nextPos Geber = Vorhand
 nextPos Vorhand = Mittelhand
 nextPos Mittelhand = Geber
+
+allPlayerPositions :: [PlayerPosition]
+allPlayerPositions = [Geber, Vorhand, Mittelhand]
+
 
 data SkatState =
     ReizPhase {
@@ -159,22 +165,6 @@ data SkatState =
     }
     deriving (Eq, Show)
 
-data SkatStateForPlayer = SkatStateForPlayer {
-    position :: PlayerPosition,
-    playerSkatState :: SkatState,
-    playerNames :: Map String String,
-    resigningPlayers :: Int
-}
-
-data LobbyForPlayer = LobbyForPlayer
-  { lobbyId        :: Int,
-    lobbyName      :: String,
-    lobbyPositions :: Map PlayerPosition String
-  }
-
-data PlayerResponse
-    = StateResponse SkatStateForPlayer
-    | LobbyResponse [LobbyForPlayer]
 
 -- XY: X sagt, Y hört
 data ReizStateMachine = MittelhandVorhand | MittelhandGeber | GeberVorhand | VorhandNix deriving(Eq, Show)
@@ -204,14 +194,6 @@ data SkatMove
     | ShowCards
     deriving (Show, Eq)
 
-data ReceivePacket
-    = MakeMove SkatMove
-    | SetName String
-    | Resign
-    | LeaveLobby
-    | JoinLobby Int PlayerPosition
-    | ChangePosition PlayerPosition
-    deriving (Show, Eq)
 
 -- For Ramsch, grand
 simpleCompatible :: Card -> Card -> Bool
