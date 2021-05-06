@@ -109,7 +109,7 @@ censoredCards state showingCards =
             ) cards
 
 instance ToJSON SkatStateForPlayer where
-    toJSON (SkatStateForPlayer player state names resigning showingCards) =
+    toJSON (SkatStateForPlayer player state names resigning) =
         object $ [
                 "you" .= playerFromPos state player,
                 "names" .= names,
@@ -117,10 +117,12 @@ instance ToJSON SkatStateForPlayer where
                 "cards" .= censoredCards state showingCards
                 ]
                 ++ personalizedSkatState state player
+        where
+            showingCards = Data.List.map playerPosition $ Data.List.filter showsCards (players state)
 
 instance ToJSON LobbyForPlayer where
-    toJSON LobbyForPlayer{lobbyId=id, lobbyName=name, lobbyPositions=pos} =
-        object $ [  "id" .= id,
+    toJSON LobbyForPlayer{lobbyId=num, lobbyName=name, lobbyPositions=pos} =
+        object $ [  "id" .= num,
                     "name" .= name,
                     "names" .= Data.Map.mapKeys show pos
                  ]
@@ -155,7 +157,7 @@ instance FromJSON ReceivePacket where
     parseJSON (Object obj) = do
         action <- obj .: "action" :: Parser Text
         case action of
-            "showcards"   -> return ShowCards
+            "showcards"   -> return $ MakeMove ShowCards
             "playcard"    -> MakeMove . PlayCard <$> (obj .: "card" :: Parser Card)
             "setname"     -> SetName  <$> (obj .: "name" :: Parser String)
             "playvariant" -> MakeMove <$> (PlayVariant <$> (obj .: "variant" :: Parser GameMode) <*> (obj .: "angesagt" :: Parser SkatGewinnstufe))

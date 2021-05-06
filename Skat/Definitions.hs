@@ -163,8 +163,7 @@ data SkatStateForPlayer = SkatStateForPlayer {
     position :: PlayerPosition,
     playerSkatState :: SkatState,
     playerNames :: Map String String,
-    resigningPlayers :: Int,
-    showingCards :: [PlayerPosition]
+    resigningPlayers :: Int
 }
 
 data LobbyForPlayer = LobbyForPlayer
@@ -202,12 +201,12 @@ data SkatMove
     | ReizBid Reizwert
     | ReizAnswer Bool
     | PlayHand Bool
+    | ShowCards
     deriving (Show, Eq)
 
 data ReceivePacket
     = MakeMove SkatMove
     | SetName String
-    | ShowCards
     | Resign
     | LeaveLobby
     | JoinLobby Int PlayerPosition

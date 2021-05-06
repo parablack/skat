@@ -20,7 +20,7 @@ import qualified Data.List as List
 import qualified Data.Map  as Map
 import Prelude hiding (lookup)
 
-import Skat.Definitions hiding (Player, position, result)
+import Skat.Definitions hiding (Player, position, result, players, playerNames)
 import Skat.Skat
 import Util
 
@@ -261,18 +261,9 @@ handlePlayerAction player Resign = do
         when needsRestart $ do
             newGame
             rotatePositions
+            -- TODO positions changed -> broadcast
     broadcastLobby lobby
 
-handlePlayerAction player ShowCards = do
-    lobby <- lookupLobby player
-    using lobby $ do
-        position <- lookupPlayerPosition player
-        state <- dataSkatState <$> get
-        newState <- return $ showCards state position
-        modify (\lobby -> lobby{ dataSkatState = newState })
-    broadcastLobby lobby
-
---    throwError "ShowCards not implemented here" -- TODO
 
 handlePlayerAction client (JoinLobby uid position) = do
     let lobby = Lobby uid
@@ -362,7 +353,6 @@ broadcastLobby lobby = do
     skatState <- using lobby $ dataSkatState <$> get
 
     let numResigned  = length . filter (dataResigned . snd) $ positionAssocs
-    let showingCards = map playerPosition $ filter showsCards (players skatState)
     nameMap          <- lobbyNameMap lobby
 
     forM_ positionAssocs ( \(position, record) ->
@@ -371,7 +361,7 @@ broadcastLobby lobby = do
             Just player -> do
                 playerRecord <- lookup player
                 (liftIO . dataReply playerRecord)
-                    (StateResponse (SkatStateForPlayer position skatState nameMap numResigned showingCards))
+                    (StateResponse (SkatStateForPlayer position skatState nameMap numResigned))
         )
 
 freePositions

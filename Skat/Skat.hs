@@ -216,6 +216,8 @@ showCards state pos = state {
 
 play :: SkatState -> PlayerPosition -> SkatMove -> Hopefully SkatState
 
+play state pos ShowCards = return $ showCards state pos
+
 play state@RunningPhase{turn=whoseTurn} pos (PlayCard card) = do
     assert (pos == whoseTurn) "It is not your turn!"
     assert (playerHasCard state pos card) "You don't have this card, you h4x0r!"
