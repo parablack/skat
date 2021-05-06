@@ -139,6 +139,13 @@ buildLobbyResponse = do
     lobbies <- Map.keys . dataLobbies <$> get
     LobbyResponse <$> (sequence $ List.map buildLobbyForPlayer lobbies)
 
+sendLobbies
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Player -> m ()
+sendLobbies player = do
+    record <- lookup player
+    buildLobbyResponse >>= liftIO . dataReply record
+
 broadcastLobbies
     :: (MonadState ServerData m, MonadError String m, MonadIO m) => m ()
 broadcastLobbies = do
@@ -178,6 +185,7 @@ registerPlayer player name onReply = do
         throwError $ (show player) ++ " already registered!"
     else
         insert player (PlayerData name Nothing onReply)
+    sendLobbies player
 
 unregisterPlayer
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
