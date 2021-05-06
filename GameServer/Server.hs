@@ -16,7 +16,7 @@ import qualified Data.List as List
 import qualified Data.Map  as Map
 import Prelude hiding (lookup)
 
-import Skat.Definitions hiding (Player, position, result, players, playerNames)
+import Skat.Definitions hiding (Player, result, players)
 import Skat.Skat
 import GameServer.Definitions
 import Util
@@ -36,46 +36,15 @@ lookupPlayerPosition player = do
   where hasPlayer = (== Just player) . dataPlayer . snd
         errorMessage = "Position of " ++ show player ++ " not found!"
 
+freePositions
+    :: MonadState LobbyData m => m [PlayerPosition]
+freePositions =
+    map fst . filter (isNothing . dataPlayer . snd) . Map.assocs . dataPositions <$> get
 
-registerPlayer
-    :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Player -> String -> (PlayerResponse -> IO ()) -> m ()
-registerPlayer player name onReply = do
-    players <- Map.keys . dataPlayers <$> get
-    if elem player players then
-        throwError $ (show player) ++ " already registered!"
-    else
-        insert player (PlayerData name Nothing onReply)
-    sendPlayerResponse player
-
-unregisterPlayer
-    :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Player -> m ()
-unregisterPlayer player = do
-    record <- lookup player
-    case dataLobby record of
-        Nothing -> return ()
-        Just _  -> handlePlayerAction player LeaveLobby
-    delete player
-    players <- Map.keys . dataPlayers <$> get
-    forM_ players sendPlayerResponse -- TODO nicht an alle schicken
-
-
-registerLobby
-    :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Lobby -> String -> m ()
-registerLobby lobby name = do
-    lobbies <- Map.keys . dataLobbies <$> get
-    if elem lobby lobbies then
-        throwError $ (show lobby) ++ " already registered!"
-    else do
-        insert lobby emptyLobbyData{ dataLobbyName = name }
-        using lobby newGame
-
-enterLobby
+addPlayerToLobby
     :: (MonadState ServerData m, MonadError String m)
     => Player -> Lobby -> PlayerPosition -> m ()
-enterLobby player lobby position = do
+addPlayerToLobby player lobby position = do
     playerRecord   <- lookup player
     positionRecord <- using lobby $ lookup position
     when (isJust $ dataLobby playerRecord) $
@@ -86,18 +55,16 @@ enterLobby player lobby position = do
     using lobby $
         insert position positionRecord{ dataPlayer = Just player }
 
-removePlayerFromLobby
-    :: (MonadState LobbyData m, MonadError String m) => Player -> m ()
-removePlayerFromLobby player = do
-    position <- lookupPlayerPosition player
-    adjust position (\record ->
-        record{ dataPlayer = Nothing, dataResigned = False }
-        )
 
-leaveLobby :: (MonadState ServerData m, MonadError String m) => Player -> m ()
-leaveLobby player = do
+removePlayerFromLobby
+    :: (MonadState ServerData m, MonadError String m) => Player -> m ()
+removePlayerFromLobby player = do
     lobby <- lookupLobby player
-    using lobby $ removePlayerFromLobby player
+    using lobby $ do
+        position <- lookupPlayerPosition player
+        adjust position (\record ->
+            record{ dataPlayer = Nothing, dataResigned = False }
+            )
     adjust player (\record -> record{ dataLobby = Nothing })
 
 newGame :: (MonadState LobbyData m, MonadIO m) => m ()
@@ -133,70 +100,6 @@ checkRestartGame = do
     let flags = map dataResigned . filter (isJust . dataPlayer) $ records
     return $ (not $ null flags) && (all id flags)
 
-handlePlayerAction
-   :: (MonadIO m, MonadState ServerData m, MonadError String m)
-   => Player -> ReceivePacket -> m ()
-
-handlePlayerAction player (MakeMove move) = do
-    lobby <- lookupLobby player
-    using lobby $ do
-        position <- lookupPlayerPosition player
-        state <- dataSkatState <$> get
-        newState <- liftEither $ play state position move
-        modify (\record -> record{ dataSkatState = newState })
-    broadcastLobby lobby
-
-handlePlayerAction player (SetName name) = do
-    record <- lookup player
-    insert player record{ dataPlayerName = name }
-    case dataLobby record of
-        Just lobby -> broadcastLobby lobby
-        Nothing    -> return ()
-
-handlePlayerAction player Resign = do
-    lobby <- lookupLobby player
-    using lobby $ do
-        position <- lookupPlayerPosition player
-        adjust position (\record -> record {dataResigned = True})
-        needsRestart <- checkRestartGame
-        when needsRestart $ do
-            newGame
-            rotatePositions
-            -- TODO positions changed -> broadcast
-    broadcastLobby lobby
-
-
-handlePlayerAction client (JoinLobby uid position) = do
-    let lobby = Lobby uid
-    enterLobby client lobby position
-    broadcastLobby lobby
-    players <- Map.keys . dataPlayers <$> get
-    forM_ players sendPlayerResponse -- TODO nicht an alle schicken
-
-handlePlayerAction player LeaveLobby = do
-    maybeLobby <- dataLobby <$> lookup player
-    case maybeLobby of
-        Nothing -> throwError $ (show player) ++ "is not in a lobby!"
-        Just lobby -> do
-            leaveLobby player
-            broadcastLobby lobby
-            sendPlayerResponse player
-    players <- Map.keys . dataPlayers <$> get
-    forM_ players sendPlayerResponse -- TODO nicht an alle schicken
-
-
-handlePlayerAction player (ChangePosition newPlayerPosition) = do
-    lobby <- lookupLobby player
-    oldPlayerPosition <- using lobby $ lookupPlayerPosition player
-    let newPosition position =
-            if      position == newPlayerPosition then oldPlayerPosition
-            else if position == oldPlayerPosition then newPlayerPosition
-            else                                       position
-    using lobby $ changePositions newPosition
-    players <- Map.keys . dataPlayers <$> get
-    forM_ players sendPlayerResponse -- TODO nicht an alle schicken
-
-
 lobbyNameMap
     :: (MonadState ServerData m, MonadError String m)
     => Lobby -> m (Map.Map String String)
@@ -208,6 +111,7 @@ lobbyNameMap lobby = do
     playerNames <- map dataPlayerName <$> mapM lookup players
     return $ Map.fromList $ zip positionNames playerNames
 
+{- =============================================================== -}
 
 buildLobbyForPlayer
     :: (MonadState ServerData m, MonadError String m)
@@ -230,45 +134,133 @@ buildLobbyForPlayer lobby@(Lobby num) = do
     }
 
 buildLobbyResponse
-    :: (MonadState ServerData m, MonadError String m) => m PlayerResponse
+    :: (MonadState ServerData m, MonadError String m) => m GameResponse
 buildLobbyResponse = do
     lobbies <- Map.keys . dataLobbies <$> get
     LobbyResponse <$> (sequence $ List.map buildLobbyForPlayer lobbies)
 
+broadcastLobbies
+    :: (MonadState ServerData m, MonadError String m, MonadIO m) => m ()
+broadcastLobbies = do
+    response <- buildLobbyResponse
+    players <- Map.keys . dataPlayers <$> get
+    forM_ players $ \player -> do
+        record <- lookup player
+        when (isNothing . dataLobby $ record) $
+            liftIO . dataReply record $ response
 
-sendPlayerResponse
-    :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Player -> m ()
-sendPlayerResponse player = do
-    playerRecord <- lookup player
-    case dataLobby playerRecord of
-        Just lobby -> broadcastLobby lobby
-        Nothing    ->
-            buildLobbyResponse >>= liftIO . dataReply playerRecord
-
-broadcastLobby
+broadcastSkatState
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
     => Lobby -> m ()
-broadcastLobby lobby = do
+broadcastSkatState lobby = do
     positionAssocs <- using lobby $ Map.assocs . dataPositions <$> get
-    skatState <- using lobby $ dataSkatState <$> get
-
+    state <- using lobby $ dataSkatState <$> get
     let numResigned  = length . filter (dataResigned . snd) $ positionAssocs
     nameMap          <- lobbyNameMap lobby
-
     forM_ positionAssocs ( \(position, record) ->
         case dataPlayer record of
             Nothing     -> return ()
             Just player -> do
                 playerRecord <- lookup player
                 (liftIO . dataReply playerRecord)
-                    (StateResponse (SkatStateForPlayer position skatState nameMap numResigned))
+                    (StateResponse (SkatStateForPlayer position state nameMap numResigned))
         )
 
-freePositions
-    :: MonadState LobbyData m => m [PlayerPosition]
-freePositions =
-    map fst . filter (isNothing . dataPlayer . snd) . Map.assocs . dataPositions <$> get
+
+{- =============================================================== -}
+
+registerPlayer
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Player -> String -> (GameResponse -> IO ()) -> m ()
+registerPlayer player name onReply = do
+    players <- Map.keys . dataPlayers <$> get
+    if elem player players then
+        throwError $ (show player) ++ " already registered!"
+    else
+        insert player (PlayerData name Nothing onReply)
+
+unregisterPlayer
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Player -> m ()
+unregisterPlayer player = do
+    record <- lookup player
+    case dataLobby record of
+        Nothing -> return ()
+        Just _  -> handlePlayerAction player LeaveLobby
+    delete player
+
+registerLobby
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Lobby -> String -> m ()
+registerLobby lobby name = do
+    lobbies <- Map.keys . dataLobbies <$> get
+    if elem lobby lobbies then
+        throwError $ (show lobby) ++ " already registered!"
+    else do
+        insert lobby emptyLobbyData{ dataLobbyName = name }
+        using lobby newGame
+    broadcastLobbies
+
+
+handlePlayerAction
+   :: (MonadIO m, MonadState ServerData m, MonadError String m)
+   => Player -> GameRequest -> m ()
+
+handlePlayerAction player (MakeMove move) = do
+    lobby <- lookupLobby player
+    using lobby $ do
+        position <- lookupPlayerPosition player
+        state <- dataSkatState <$> get
+        newState <- liftEither $ play state position move
+        modify (\record -> record{ dataSkatState = newState })
+    broadcastSkatState lobby
+
+handlePlayerAction player (SetName name) = do
+    record <- lookup player
+    insert player record{ dataPlayerName = name }
+    case dataLobby record of
+        Just lobby -> broadcastSkatState lobby
+        Nothing    -> return ()
+    broadcastLobbies
+
+handlePlayerAction player Resign = do
+    lobby <- lookupLobby player
+    needsRestart <- using lobby $ do
+        position <- lookupPlayerPosition player
+        adjust position (\record -> record {dataResigned = True})
+        checkRestartGame
+    when needsRestart $ do
+        using lobby $ do
+            newGame
+            rotatePositions
+        broadcastLobbies
+    broadcastSkatState lobby
+
+handlePlayerAction client (JoinLobby uid position) = do
+    let lobby = Lobby uid
+    addPlayerToLobby client lobby position
+    players <- Map.keys . dataPlayers <$> get
+    broadcastSkatState lobby
+    broadcastLobbies
+
+handlePlayerAction player LeaveLobby = do
+    lobby <- lookupLobby player
+    removePlayerFromLobby player
+    broadcastSkatState lobby
+    broadcastLobbies
+
+
+handlePlayerAction player (ChangePosition newPlayerPosition) = do
+    lobby <- lookupLobby player
+    oldPlayerPosition <- using lobby $ lookupPlayerPosition player
+    let newPosition position =
+            if      position == newPlayerPosition then oldPlayerPosition
+            else if position == oldPlayerPosition then newPlayerPosition
+            else                                       position
+    using lobby $ changePositions newPosition
+    broadcastSkatState lobby
+    broadcastLobbies
+
 
 joinFreeLobby
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
@@ -279,6 +271,7 @@ joinFreeLobby player = do
     let free = List.find (not . null . snd) $ zip lobbies avail
     case free of
         Just (lobby, position:_) -> do
-            enterLobby player lobby position
-            broadcastLobby lobby
+            addPlayerToLobby player lobby position
+            broadcastSkatState lobby
+            broadcastLobbies
         _ -> throwError "No free lobby found!"

@@ -23,5 +23,5 @@ main = B.putStr $ encode (SkatStateForPlayer Vorhand turn1 Data.Map.empty)
 
 packet1 = "{\"action\":\"showcards\"}"
 packet2 = "{\"action\":\"playcard\", \"card\":{\"name\":\"Jack\",\"suit\":\"Hearts\"}}"
-res1 = eitherDecode packet1 :: Hopefully ReceivePacket
-res2 = eitherDecode packet2 :: Hopefully ReceivePacket
+res1 = eitherDecode packet1 :: Hopefully GameRequest
+res2 = eitherDecode packet2 :: Hopefully GameRequest

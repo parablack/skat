@@ -3,10 +3,10 @@
 {-# LANGUAGE FlexibleContexts       #-}
 
 module GameServer.Definitions (
-    ReceivePacket(..),
+    GameRequest(..),
     SkatStateForPlayer(..),
     LobbyForPlayer(..),
-    PlayerResponse(..),
+    GameResponse(..),
     Player(..),
     PlayerData(..),
     Lobby(..),
@@ -26,7 +26,7 @@ import qualified Data.Map as Map
 import Data.Maybe
 import Prelude hiding (lookup)
 
-import Skat.Definitions hiding (Player, position, result, players, playerNames)
+import Skat.Definitions hiding (Player, result, players)
 import Skat.Skat
 
 newtype Player = Player String
@@ -35,7 +35,7 @@ newtype Player = Player String
 newtype Lobby = Lobby Int
     deriving (Show, Eq, Ord)
 
-data ReceivePacket
+data GameRequest
     = MakeMove SkatMove
     | SetName String
     | Resign
@@ -46,26 +46,26 @@ data ReceivePacket
 
 
 data SkatStateForPlayer = SkatStateForPlayer
-  { position :: PlayerPosition,
-    playerSkatState :: SkatState,
-    playerNames :: Map.Map String String,
-    resigningPlayers :: Int
-}
+  { skatPosition         :: PlayerPosition,
+    skatState            :: SkatState,
+    skatPlayerNames      :: Map.Map String String,
+    skatResigningPlayers :: Int
+  }
 
 data LobbyForPlayer = LobbyForPlayer
   { lobbyId        :: Int,
     lobbyName      :: String,
     lobbyPositions :: Map.Map PlayerPosition String
-}
+  }
 
-data PlayerResponse
+data GameResponse
     = StateResponse SkatStateForPlayer
     | LobbyResponse [LobbyForPlayer]
 
 data PlayerData = PlayerData
   { dataPlayerName  :: String,
     dataLobby :: Maybe Lobby,
-    dataReply :: PlayerResponse -> IO ()
+    dataReply :: GameResponse -> IO ()
   }
 
 data LobbyData = LobbyData

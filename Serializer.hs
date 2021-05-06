@@ -128,7 +128,7 @@ instance ToJSON LobbyForPlayer where
                     "names" .= Data.Map.mapKeys show pos
                  ]
 
-instance ToJSON PlayerResponse where
+instance ToJSON GameResponse where
     toJSON (StateResponse state@SkatStateForPlayer{}) = toJSON state
     toJSON (LobbyResponse lobbies) =
         object $ [
@@ -154,7 +154,7 @@ instance FromJSON GameMode where
     parseJSON _ = parseFail "PlayVariant must be a string."
 
 
-instance FromJSON ReceivePacket where
+instance FromJSON GameRequest where
     parseJSON (Object obj) = do
         action <- obj .: "action" :: Parser Text
         case action of

@@ -23,17 +23,17 @@ maxElem = List.foldr (max . Just) Nothing
 
 shuffle :: MonadIO m => [a] -> m [a]
 shuffle xs = liftIO $ do
-    ar <- newArray n xs
+    ar <- array n xs
     forM [1..n] $ \i -> do
-        j <- randomRIO (i,n)
+        j <- randomRIO (i, n)
         vi <- readArray ar i
         vj <- readArray ar j
         writeArray ar j vi
         return vj
   where
     n = List.length xs
-    newArray :: Int -> [a] -> IO (IOArray Int a)
-    newArray n xs =  newListArray (1, n) xs
+    array :: Int -> [a] -> IO (IOArray Int a)
+    array m ys =  newListArray (1, m) ys
 
 assert :: Bool -> String -> Either String ()
 assert True _ = return ()

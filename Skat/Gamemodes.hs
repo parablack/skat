@@ -26,6 +26,7 @@ singlePlayerHasWon :: PlayerPosition -> SkatScoringInformation -> Map PlayerPosi
 singlePlayerHasWon pos SkatScoringInformation{angesagteStufe=stufe} cards = scoreSufficient stufe (cards ! pos)
 
 
+mRamsch :: GameMode
 mRamsch = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
@@ -44,7 +45,9 @@ countSpitzen (x:xs) cards
           nextPresent  = snd otherSpitzen
           nextCnt      = fst otherSpitzen
 
+bubenSpitzen :: [Card]
 bubenSpitzen = reverse $ sort [(Card Jack suit) | suit <- suits]
+
 farbSpitzen :: Suit -> [Card]
 farbSpitzen suit = bubenSpitzen ++ (reverse $ sort [(Card kind suit) | kind <- names, kind /= Jack])
 
@@ -66,6 +69,7 @@ factorGewinnstufe state@SkatScoringInformation{angesagteStufe=stufe} myCards
           schneider = sumCards myCards >= 90 || sumCards myCards <= 30
           schwarz   = length myCards == 32   || length myCards == 0
 
+mGrand :: GameMode
 mGrand = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
@@ -110,8 +114,10 @@ mColor color = GameMode {
 nullCompatible :: Card -> Card -> Bool
 nullCompatible (Card _ suit) (Card _ suit') = suit == suit'
 
-
+nullOrdering :: [Name]
 nullOrdering = [Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
+
+nullCardLE :: Card -> Card -> Bool
 nullCardLE (Card x suit) (Card y suit')
     | suit == suit' = fromJust (elemIndex x nullOrdering) <= fromJust (elemIndex y nullOrdering)
     | otherwise     = False
