@@ -7,6 +7,22 @@ body {
   height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+
+/*background: linear-gradient(
+    180deg,
+    rgba(14,76,176,1)    0%,
+    rgba(14,137,226,1)  19%,
+    rgba(0,136,255,1)   30%,
+    rgba(9,169,255,1)   49%,
+    rgba(168,208,93,1)  55%,
+    rgba(246,245,12,1)  62%,
+    rgba(240,224,15,1)  75%,
+    rgba(215,177,43,1) 100%
+);*/
+
+
+background: linear-gradient(117deg, rgba(119,32,32,1) 0%, rgba(115,57,57,1) 24%, rgba(75,39,39,1) 50%, rgba(48,37,37,1) 75%, rgba(42,37,37,1) 100%);
 }
 
 #root {

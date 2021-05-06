@@ -23,9 +23,12 @@ const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
 }
 
 export const LobbyInput: React.FC<{ ws: WebSocket, state: ILobbyState }> = ({ ws, state }) => {
-  return <>
-    Lobbies:
-    <table style={{ border: '1px solid black' }}>
+  return (<p>
+    <h3>Lobbies:</h3>
+    <table style={{
+        borderSpacing: "1em"
+        // border: '1px solid black'
+    }}>
       <thead>
         <tr>
           <th>Lobby</th>
@@ -49,7 +52,7 @@ export const LobbyInput: React.FC<{ ws: WebSocket, state: ILobbyState }> = ({ ws
         </tr>)}
       </tbody>
     </table>
-  </>
+  </p>)
 }
 
 
@@ -108,13 +111,13 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
       height: "100%",
     }}>
       <section style={{
-        backgroundColor: '#282c34',
+        // backgroundColor: '#282c34',
         display: 'flex',
         flexDirection: inLobby(state) ? 'row' : 'column-reverse',
         alignItems: 'center',
         justifyContent: 'space-evenly',
         fontSize: 'calc(10px + 2vmin)',
-        color: 'white',
+        color: '#e66',
         height: '100%'
       }}>
 
@@ -138,15 +141,32 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             </span>
           ) : null}
 
-          <div style={{ width: '100%', fontSize: '.8em', background: 'grey', minWidth: '40vmin', minHeight: '40vmin', display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-            {state.phase === "empty" ? <h1>Server ist down <button className="unicode-button" onClick={() => window.location.reload()}>&#x1F62D;</button></h1> : null}
-            {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
-            {state.phase === "handpicking" ? <HandPickInput ws={ws} state={state} /> : null}
-            {state.phase === "skatpicking" ? <SkatPickInput ws={ws} state={state} /> : null}
-            {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
-            {state.phase === "running" || state.phase === "finished" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
-            {state.phase === "lobby" ? <LobbyInput ws={ws} state={state} /> : null}
-          </div>
+
+          {state.phase === "lobby" ?
+            <LobbyInput ws={ws} state={state} /> :
+
+            <div style={{
+                width: '100%',
+                fontSize: '.8em',
+                boxShadow: "inset 0 0 5em 2.5em #151515",
+                background: "#606060",
+                minWidth: '40vmin',
+                minHeight: '40vmin',
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center"
+             }}>
+
+              {state.phase === "empty" ? <h1>Server ist down <button className="unicode-button" onClick={() => window.location.reload()}>&#x1F62D;</button></h1> : null}
+              {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
+              {state.phase === "handpicking" ? <HandPickInput ws={ws} state={state} /> : null}
+              {state.phase === "skatpicking" ? <SkatPickInput ws={ws} state={state} /> : null}
+              {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
+              {state.phase === "running" || state.phase === "finished" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
+            </div>
+        }
+
 
           {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
 
