@@ -22,7 +22,11 @@ body {
 );*/
 
 
+/*
 background: linear-gradient(117deg, rgba(119,32,32,1) 0%, rgba(115,57,57,1) 24%, rgba(75,39,39,1) 50%, rgba(48,37,37,1) 75%, rgba(42,37,37,1) 100%);
+*/
+
+background-image: linear-gradient(315deg, #485461 0%, #28313b 74%);
 }
 
 #root {

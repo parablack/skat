@@ -1,4 +1,4 @@
-import { ICard } from "./State"
+import { ICard } from "../State"
 
 export const geileMap: { [name: string]: string } = {
     "Diamonds": "♦",
@@ -23,13 +23,13 @@ export const geileFarbenMap: { [name: string]: string } = {
     "Clubs": "black",
     "?": "gray"
 }
-const geileWerteMap: { [name: string]: string } = {
+export const geileWerteMap: { [name: string]: string } = {
     "Ten": "10",
     "Seven": "7",
     "Eight": "8",
     "Nine": "9",
-    "Jack": "J",
-    "Queen": "Q",
+    "Jack": "B",
+    "Queen": "D",
     "King": "K",
     "Ace": "A",
     "?": ""

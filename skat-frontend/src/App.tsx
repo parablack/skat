@@ -2,7 +2,8 @@ import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
 import { EMPTY_STATE, ICard, ILobbyState, inLobby, Stich } from './State';
-import { Card, geileDeutschMap, geileFarbenMap, geileMap } from './Card';
+import { geileDeutschMap, geileFarbenMap, geileMap } from './Cards/SimpleCard';
+import { Card } from './Cards/SimpleCard';
 import { YourHand, OpponentHands } from './Hand';
 import { Scoreboard } from './Scoreboard';
 import { ReizInput, HandPickInput, SkatPickInput, GamePickInput } from './Reizen';
@@ -12,9 +13,16 @@ const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
   return <div> {cards.length ? (
     <span style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
       {cards.map(([card, name], index) => {
-        return <span style={{}} key={index}>
-          <Card card={card} player={name}></Card>
+        return <>
+        <span style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{margin: '0.5em'}} key={index}>
+              <Card card={card} player={name}></Card>
+            </span>
+            <small>
+                {name}
+            </small>
         </span>
+        </>
       })}
     </span>
   ) : (
@@ -117,7 +125,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
         alignItems: 'center',
         justifyContent: 'space-evenly',
         fontSize: 'calc(10px + 2vmin)',
-        color: '#e66',
+        color: 'white',
         height: '100%'
       }}>
 
@@ -148,8 +156,8 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             <div style={{
                 width: '100%',
                 fontSize: '.8em',
-                boxShadow: "inset 0 0 5em 2.5em #151515",
-                background: "#606060",
+                boxShadow: "inset 0 0 5em 2.5em #252525",
+                background: "#404040",
                 minWidth: '40vmin',
                 minHeight: '40vmin',
                 display: "flex",
