@@ -4,42 +4,42 @@ import { geileWerteMap } from './SimpleCard';
 
 
 
-const cornerImages: { [suit: string]: string } = {
-    "Diamonds": <img src="/images/diamonds.png" style={{transform: "translate(-50%, -50%) scale(0.04)"}} />,
-    "Hearts":   <img src="/images/hearts.png"   style={{transform: "translate(-50%, -50%) scale(0.04)"}} />,
-    "Clubs":    <img src="/images/clubs.png"    style={{transform: "translate(-50%, -50%) scale(0.04)"}} />,
-    "Spades":   <img src="/images/spades.png"   style={{transform: "translate(-50%, -50%) scale(0.04)"}} />,
+const cornerImages: { [suit: string]: any } = {
+    "Diamonds": <><img src="/images/diamonds.png" style={{transform: "translate(-50%, -50%) scale(0.04)"}} /></>,
+    "Hearts":   <><img src="/images/hearts.png"   style={{transform: "translate(-50%, -50%) scale(0.04)"}} /></>,
+    "Clubs":    <><img src="/images/clubs.png"    style={{transform: "translate(-50%, -50%) scale(0.04)"}} /></>,
+    "Spades":   <><img src="/images/spades.png"   style={{transform: "translate(-50%, -50%) scale(0.04)"}} /></>,
 }
 
-const numberImages: { [suit: string]: string } = {
+const numberImages: { [suit: string]: any } = {
     "Diamonds": <img src="/images/diamonds.png" style={{transform: "translate(-50%, -50%) scale(0.065)"}} />,
     "Hearts":   <img src="/images/hearts.png"   style={{transform: "translate(-50%, -50%) scale(0.065)"}} />,
     "Clubs":    <img src="/images/clubs.png"    style={{transform: "translate(-50%, -50%) scale(0.065)"}} />,
     "Spades":   <img src="/images/spades.png"   style={{transform: "translate(-50%, -50%) scale(0.065)"}} />,
 }
 
-const jackImages: { [suit: string]: string } = {
+const jackImages: { [suit: string]: any } = {
     "Diamonds": <img src="/images/diamonds-jack.png" style={{transform: "translate(-50%, -50%) scale(0.2)"}} />,
     "Hearts":   <img src="/images/hearts-jack.png"   style={{transform: "translate(-50%, -50%) scale(0.2)"}} />,
     "Clubs":    <img src="/images/clubs-jack.png"   style={{transform: "translate(-50%, -50%) scale(0.2)"}} />,
     "Spades":   <img src="/images/spades-jack.png"   style={{transform: "translate(-50%, -50%) scale(0.2)"}} />,
 }
 
-const kingImages: { [suit: string]: string } = {
+const kingImages: { [suit: string]: any } = {
     "Diamonds": <img src="/images/diamonds-king.png" style={{transform: "translate(-50%, -46%) scale(0.25)"}} />,
     "Hearts":   <img src="/images/hearts-king.png"   style={{transform: "translate(-50%, -46%) scale(0.25)"}} />,
     "Clubs":    <img src="/images/clubs-king.png"    style={{transform: "translate(-50%, -46%) scale(0.25)"}} />,
     "Spades":   <img src="/images/spades-king.png"   style={{transform: "translate(-50%, -46%) scale(0.25)"}} />,
 }
 
-const aceImages: { [suit: string]: string } = {
+const aceImages: { [suit: string]: any } = {
     "Diamonds": <img src="/images/diamonds-ace.png" style={{transform: "translate(-50%, -50%) scale(0.25)"}} />,
     "Hearts":   <img src="/images/hearts-ace.png"  style={{transform: "translate(-50%, -50%) scale(0.25)"}} />,
     "Clubs":    <img src="/images/clubs-ace.png"    style={{transform: "translate(-50%, -50%) scale(0.25)"}} />,
     "Spades":   <img src="/images/spades-ace.png"   style={{transform: "translate(-50%, -50%) scale(0.25)"}} />,
 }
 
-const specialImages: { [name: string]: {[suit: string]: string} } = {
+const specialImages: { [name: string]: {[suit: string]: any} } = {
     "Jack": jackImages,
     "King": kingImages,
     "Ace": aceImages
@@ -80,11 +80,11 @@ const NumbersTop: React.FC<{card: ICard}> = ({ card }) => {
     }
     if (name == "Ten") {
         return <>
-        <span class="position-symbol-0">{image}</span>
-        <span class="position-symbol-1">{image}</span>
-        <span class="position-symbol-5">{image}</span>
-        <span class="position-symbol-7">{image}</span>
-        <span class="position-symbol-8">{image}</span>
+        <span className="position-symbol-0">{image}</span>
+        <span className="position-symbol-1">{image}</span>
+        <span className="position-symbol-5">{image}</span>
+        <span className="position-symbol-7">{image}</span>
+        <span className="position-symbol-8">{image}</span>
         </>
     }
     return <></>
@@ -116,11 +116,11 @@ const NumbersBottom: React.FC<{card: ICard}> = ({ card }) => {
     }
     if (name == "Ten") {
         return <>
-        <span class="position-symbol-0">{image}</span>
-        <span class="position-symbol-1">{image}</span>
-        <span class="position-symbol-5">{image}</span>
-        <span class="position-symbol-7">{image}</span>
-        <span class="position-symbol-8">{image}</span>
+        <span className="position-symbol-0">{image}</span>
+        <span className="position-symbol-1">{image}</span>
+        <span className="position-symbol-5">{image}</span>
+        <span className="position-symbol-7">{image}</span>
+        <span className="position-symbol-8">{image}</span>
         </>
     }
     return <></>
