@@ -3,7 +3,7 @@ import { Card } from "./Cards/ImageCard";
 import { ICard, IGameState } from "./State";
 
 const ratio = 84.9667 / 122.567   // ratio cardWidth/cardHeight (including colored border)
-const overlap = 0.5;              // between 0 and 1, smaller = larger overlap
+const overlap = 0.55;              // between 0 and 1, smaller = larger overlap
 
 function nextPlayer(s: string) {
     if (s === "Geber") return "Vorhand";
@@ -134,22 +134,25 @@ export const YourHand: React.FC<{ state: IGameState, onClickCard: (card: ICard) 
 
 
 export const OpponentHands: React.FC<{
-        state: IGameState,
-        onChangePos: (pos: String) => void
-    }> = ({ state, onChangePos }) => {
+    state: IGameState,
+    onChangePos: (pos: String) => void,
+    statusElement: React.ReactNode
+}> = ({ state, onChangePos, statusElement }) => {
 
     let you = state.you.position;
     let left = createPlayerStruct(state, nextPlayer(you))
     let right = createPlayerStruct(state, nextPlayer(nextPlayer(you)))
     return <div style={{
         display: 'flex',
-        justifyContent: 'flex-start', fontSize: '.8em', width: (overlap * 10 * 7) + "rem", height: "8rem",
+        justifyContent: 'flex-start',
+        fontSize: '.8em',
+        width: (overlap * 10 * 7) + "rem",
+        height: "8rem",
         position: "relative"
     }}>
         <div style={{
             position: "absolute",
             left: "0",
-            display: "flew",
             flexDirection: "column",
             color: left.active ? "red" : "white"
         }}>
@@ -157,15 +160,23 @@ export const OpponentHands: React.FC<{
                 ? <div>{left.name}</div>
                 : <button onClick={() => {
                     onChangePos(left.position)
-                  }}>Mein Platz!</button>
+                }}>Mein Platz!</button>
             }
             <div><small>{left.position}</small></div>
-
         </div>
+        <span style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+        }}>
+            {statusElement}
+        </span>
         <div style={{
             position: "absolute",
             right: "0",
-            display: "flew",
             flexDirection: "column",
             color: right.active ? "red" : "white"
         }}>
@@ -173,7 +184,7 @@ export const OpponentHands: React.FC<{
                 ? <div>{right.name}</div>
                 : <button onClick={() => {
                     onChangePos(right.position)
-                  }}>Mein Platz!</button>
+                }}>Mein Platz!</button>
             }
             <div><small>{right.position}</small></div>
         </div>

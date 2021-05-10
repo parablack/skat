@@ -1,12 +1,13 @@
 import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
-import { EMPTY_STATE, ICard, ILobbyState, inLobby, Stich } from './State';
+import { EMPTY_STATE, ICard, inLobby, Stich } from './State';
 import { geileDeutschMap, geileFarbenMap, geileMap } from './Cards/SimpleCard';
 import { Card } from './Cards/ImageCard';
 import { YourHand, OpponentHands } from './Hand';
 import { Scoreboard } from './Scoreboard';
 import { ReizInput, HandPickInput, SkatPickInput, GamePickInput } from './Reizen';
+import { LobbyInput } from './Lobby';
 
 
 const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
@@ -28,39 +29,6 @@ const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
   ) : (
     <img src={logo} className="App-logo" alt="logo" />
   )} </div>
-}
-
-export const LobbyInput: React.FC<{ ws: WebSocket, state: ILobbyState }> = ({ ws, state }) => {
-  return (<p>
-    <h3>Lobbies:</h3>
-    <table style={{
-      borderSpacing: "1em"
-      // border: '1px solid black'
-    }}>
-      <thead>
-        <tr>
-          <th>Lobby</th>
-          <th>Vorhand</th>
-          <th>Mittelhand</th>
-          <th>Geber</th>
-        </tr>
-      </thead>
-      <tbody>
-        {state.lobbies.map((lobby, index) => <tr key={index}>
-          <td>{lobby.name || lobby.id}</td>
-          {["Vorhand", "Mittelhand", "Geber"].map(pos => <td key={pos}>
-            {lobby.names[pos] ? (
-              <span>{lobby.names[pos]}</span>
-            ) : (
-              <button onClick={() => {
-                ws.send(JSON.stringify({ action: "join", id: lobby.id, position: pos }))
-              }}>Mein Platz!</button>
-            )}
-          </td>)}
-        </tr>)}
-      </tbody>
-    </table>
-  </p>)
 }
 
 
@@ -91,6 +59,10 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     return () => ws.close()
   }, [ws])
 
+  if (state.phase === "lobby") {
+    return <LobbyInput ws={ws} state={state} />
+  }
+
   let displayStich: Stich = [];
   let sieSpielen: string = state.phase
 
@@ -110,8 +82,6 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     sieSpielen = "Noch nichts"
   } else if (state.phase === "handpicking") {
     sieSpielen = "Hand wählen ..."
-  } else if (state.phase === "lobby") {
-    sieSpielen = "Lobbyauswahl"
   }
 
   return (
@@ -135,7 +105,8 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
           flexDirection: 'column',
           justifyContent: inLobby(state) ? 'space-evenly' : 'normal',
           alignItems: 'center',
-          height: '100%'
+          height: '100%',
+          width: '50vw',
         }}>
 
           {inLobby(state) ? (
@@ -146,17 +117,43 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                   (pos) => ws.send(
                     JSON.stringify({ action: "changepos", position: pos })
                   )}
+                statusElement={
+                  <header>
+                    🏝️Ramschinsel🏝️
+                    <br />
+                    <small>
+                      {state.phase === 'running'
+                        ? <span>
+                          {!state.singlePlayer || state.singlePlayer === 'nobody' || state.singlePlayer === state.you.position
+                            ? <span>Heute spielen Sie:</span>
+                            : <span>Heute spielt {state.names[state.singlePlayer] || state.singlePlayer}:</span>}
+                          {' '}
+                          {state.gamemode.kind === "Farbspiel" ? <>
+                            <span style={{ color: geileFarbenMap[state.gamemode.color] }}>
+                              {geileMap[state.gamemode.color]}
+                            </span>{' '}
+                            {geileDeutschMap[state.gamemode.color]}</>
+                            : state.gamemode.kind}
+                          {' '}
+                          {state.scoring.hand ? "Hand" : " "}{' '}{state.scoring.angesagt !== 'Normal' ? state.scoring.angesagt : null}
+                        </span>
+                        : <span>Heute spielen Sie: {sieSpielen}</span>}
+                    </small>
+                  </header>
+                }
               />
             </span>
           ) : null}
 
-
-          {state.phase === "lobby" ?
-            <LobbyInput ws={ws} state={state} /> :
-
+          <div style={{
+            display: "flex",
+            flexDirection: "row",
+            width: '100%',
+            fontSize: '.8em',
+          }}>
+            <span style={{ width: '4em' }}></span>
             <div style={{
               width: '100%',
-              fontSize: '.8em',
               boxShadow: "inset 0 0 5em 2.5em #252525",
               background: "#404040",
               minWidth: '40vmin',
@@ -166,7 +163,6 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
               justifyContent: "center",
               alignItems: "center"
             }}>
-
               {state.phase === "empty" ? <h1>Server ist down <button className="unicode-button" onClick={() => window.location.reload()}>&#x1F62D;</button></h1> : null}
               {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
               {state.phase === "handpicking" ? <HandPickInput ws={ws} state={state} /> : null}
@@ -174,8 +170,21 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
               {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
               {state.phase === "running" || state.phase === "finished" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
             </div>
-          }
-
+            <span style={{ width: '4em', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>👀</button>
+              {inLobby(state) ? (
+                <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
+                  <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '100%' }}>
+                    <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>🏳️</span>
+                    <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-40%, -85%)', fontSize: '.5em', color: 'black' }}>
+                      {state.resign}/{Object.entries(state.names).length}
+                    </span>
+                  </div>
+                </button>
+              ) : null}
+              <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "leave", })) }}>🚪</button>
+            </span>
+          </div>
 
           {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
 
@@ -193,6 +202,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
 
         </div>
 
+        {/*
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -206,7 +216,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             <small>
               {state.phase === 'running'
                 ? <span>
-                  {!state.singlePlayer || state.singlePlayer === state.you.position
+                  {!state.singlePlayer || state.singlePlayer === 'nobody' || state.singlePlayer === state.you.position
                     ? <span>Heute spielen Sie:</span>
                     : <span>Heute spielt {state.names[state.singlePlayer]}:</span>}
                   {' '}
@@ -217,7 +227,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                     {geileDeutschMap[state.gamemode.color]}</>
                     : state.gamemode.kind}
                   {' '}
-                  {state.scoring.hand ? "Hand" : " "}{' '}{state.scoring.angesagt}
+                  {state.scoring.hand ? "Hand" : " "}{' '}{state.scoring.angesagt !== 'Normal' ? state.scoring.angesagt : null}
                 </span>
                 : <span>Heute spielen Sie: {sieSpielen}</span>}
             </small>
@@ -237,7 +247,8 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                   localStorage.setItem("nickname", name)
                 }
               }
-              }>&#x270F;&#xFE0F;
+              }>
+                ✏️
               </button>
             </div>
 
@@ -245,7 +256,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
               Mit offenen Karten spielen
               <br />
               <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>
-                &#x1F440;
+                👀
               </button>
             </div>
 
@@ -253,11 +264,12 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
               Nächste Runde ({state.resign} / {Object.entries(state.names).length})
               <br />
               <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
-                &#x1F1EB;&#x1F1F7;
+                🇫🇷
               </button>
             </div>
           </> : null}
         </div>
+        */}
       </section>
     </div>
   );

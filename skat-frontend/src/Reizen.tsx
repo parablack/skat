@@ -36,13 +36,13 @@ export const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, 
                             reizbid: parseInt(textInput!.current!.value),
                         }))
 
-                    }}>&#x1F4C8;</button>
+                    }}>📈</button>
           oder
           <button className="unicode-button" onClick={() => {
                         ws.send(JSON.stringify({
                             action: "reizweg",
                         }))
-                    }}>&#x1F6AA;</button>
+                    }}>📉</button>
                 </div>
             </div>
         )
