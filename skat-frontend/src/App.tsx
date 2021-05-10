@@ -110,7 +110,6 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
         }}>
 
           {inLobby(state) ? (
-            <span style={{ margin: '.4em' }}>
               <OpponentHands
                 state={state}
                 onChangePos={
@@ -142,7 +141,6 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
                   </header>
                 }
               />
-            </span>
           ) : null}
 
           <div style={{

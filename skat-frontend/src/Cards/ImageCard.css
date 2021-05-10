@@ -2,14 +2,15 @@
     display: inline-block;
     position: relative;
 
-    width: 6rem;
-    height: 9.25rem;
-    border-radius: 0.3rem;
-    border: 0.07rem solid black;
+    width: 6em;
+    height: 9.25em;
+    border-radius: 0.3em;
+    border: 0.07em solid black;
     background-color: white;
 
     font-family: "Courier New, monospace";
-    font-size: 1rem;
+
+    font-size: 1.3em;
 
     user-select: none;
 }

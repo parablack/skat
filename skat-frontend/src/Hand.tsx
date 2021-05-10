@@ -146,8 +146,8 @@ export const OpponentHands: React.FC<{
         display: 'flex',
         justifyContent: 'flex-start',
         fontSize: '.8em',
-        width: (overlap * 10 * 7) + "rem",
         height: "8rem",
+        width: "100%",
         position: "relative"
     }}>
         <div style={{

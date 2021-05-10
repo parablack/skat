@@ -10,10 +10,10 @@ const cornerImages: { [suit: string]: any } = {
 }
 
 const numberImages: { [suit: string]: any } = {
-    "Diamonds": <img alt="" src="/images/diamonds.png" style={{ transform: "translate(-50%, -50%) scale(0.065)" }} />,
-    "Hearts": <img alt="" src="/images/hearts.png" style={{ transform: "translate(-50%, -50%) scale(0.065)" }} />,
-    "Clubs": <img alt="" src="/images/clubs.png" style={{ transform: "translate(-50%, -50%) scale(0.065)" }} />,
-    "Spades": <img alt="" src="/images/spades.png" style={{ transform: "translate(-50%, -50%) scale(0.065)" }} />,
+    "Diamonds": <img width="36em" alt="" src="/images/diamonds.png" style={{ transform: "translate(-50%, -50%)" }} />,
+    "Hearts": <img width="36em" alt="" src="/images/hearts.png" style={{ transform: "translate(-50%, -50%)" }} />,
+    "Clubs": <img width="36em" alt="" src="/images/clubs.png" style={{ transform: "translate(-50%, -50%)" }} />,
+    "Spades": <img width="36em" alt="" src="/images/spades.png" style={{ transform: "translate(-50%, -50%)" }} />,
 }
 
 const jackImages: { [suit: string]: any } = {
