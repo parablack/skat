@@ -14,14 +14,14 @@ const TableStack: React.FC<{ cards: [ICard, string][] }> = ({ cards }) => {
     <span style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
       {cards.map(([card, name], index) => {
         return <>
-        <span style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{margin: '0.5em'}} key={index}>
+          <span style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{ margin: '0.5em' }} key={index}>
               <Card card={card} player={name}></Card>
             </span>
             <small>
-                {name}
+              {name}
             </small>
-        </span>
+          </span>
         </>
       })}
     </span>
@@ -34,8 +34,8 @@ export const LobbyInput: React.FC<{ ws: WebSocket, state: ILobbyState }> = ({ ws
   return (<p>
     <h3>Lobbies:</h3>
     <table style={{
-        borderSpacing: "1em"
-        // border: '1px solid black'
+      borderSpacing: "1em"
+      // border: '1px solid black'
     }}>
       <thead>
         <tr>
@@ -84,8 +84,8 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
     }
 
     ws.onclose = () => {
-        console.log("ws closed")
-        setState(EMPTY_STATE)
+      console.log("ws closed")
+      setState(EMPTY_STATE)
     }
 
     return () => ws.close()
@@ -117,6 +117,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
   return (
     <div className="App" style={{
       height: "100%",
+      overflow: 'hidden',
     }}>
       <section style={{
         // backgroundColor: '#282c34',
@@ -142,9 +143,9 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
               <OpponentHands
                 state={state}
                 onChangePos={
-                    (pos) => ws.send(
-                        JSON.stringify({ action: "changepos", position: pos})
-                    )}
+                  (pos) => ws.send(
+                    JSON.stringify({ action: "changepos", position: pos })
+                  )}
               />
             </span>
           ) : null}
@@ -154,17 +155,17 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
             <LobbyInput ws={ws} state={state} /> :
 
             <div style={{
-                width: '100%',
-                fontSize: '.8em',
-                boxShadow: "inset 0 0 5em 2.5em #252525",
-                background: "#404040",
-                minWidth: '40vmin',
-                minHeight: '40vmin',
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center"
-             }}>
+              width: '100%',
+              fontSize: '.8em',
+              boxShadow: "inset 0 0 5em 2.5em #252525",
+              background: "#404040",
+              minWidth: '40vmin',
+              minHeight: '40vmin',
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center"
+            }}>
 
               {state.phase === "empty" ? <h1>Server ist down <button className="unicode-button" onClick={() => window.location.reload()}>&#x1F62D;</button></h1> : null}
               {state.phase === "reizen" ? <ReizInput ws={ws} state={state} /> : null}
@@ -173,7 +174,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
               {state.phase === "gamepicking" ? <GamePickInput ws={ws} state={state} /> : null}
               {state.phase === "running" || state.phase === "finished" ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} /> : null}
             </div>
-        }
+          }
 
 
           {state.phase === "finished" ? <Scoreboard state={state} /> : ""}
@@ -200,7 +201,7 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
           height: '100%'
         }}>
           <header>
-            Wilkommen auf der Ramschinsel!
+            Wilkommen auf der 🏝️Ramschinsel🏝️!
             <br />
             <small>
               {state.phase === 'running'
