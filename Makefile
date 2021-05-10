@@ -20,7 +20,7 @@ frontend: skat-frontend/src/*.tsx
 	cd skat-frontend && yarn build
 
 deploy: all frontend
-	scp *.hs bpara:/var/www/skat/
+	scp -r Skat GameServer *.hs bpara:/var/www/skat/
 	scp Skat.cabal bpara:/var/www/skat/
 	scp -r skat-frontend/build/* bpara:/var/www/skat/frontend/
 	ssh -f bpara 'systemctl restart skat'
