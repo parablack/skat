@@ -3,7 +3,7 @@ import './App.css';
 import React, { useEffect, useState } from 'react';
 import { EMPTY_STATE, ICard, ILobbyState, inLobby, Stich } from './State';
 import { geileDeutschMap, geileFarbenMap, geileMap } from './Cards/SimpleCard';
-import { Card } from './Cards/SimpleCard';
+import { Card } from './Cards/ImageCard';
 import { YourHand, OpponentHands } from './Hand';
 import { Scoreboard } from './Scoreboard';
 import { ReizInput, HandPickInput, SkatPickInput, GamePickInput } from './Reizen';

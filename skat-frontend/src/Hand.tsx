@@ -1,5 +1,5 @@
 import React from "react";
-import { Card } from "./Cards/SimpleCard";
+import { Card } from "./Cards/ImageCard";
 import { ICard, IGameState } from "./State";
 
 const ratio = 84.9667 / 122.567   // ratio cardWidth/cardHeight (including colored border)
