@@ -2,39 +2,52 @@ import './ImageCard.css';
 import { ICard } from "../State"
 import { geileWerteMap } from './SimpleCard';
 
+const image = function(name: string, width: number, dx?: number, dy?: number) : any {
+    dx = dx ? dx - 50 : -50;
+    dy = dy ? dy - 50 : -50;
+    return <img
+        alt=""
+        src={`/images/${name}.png`}
+        style={{
+            transform: `translate(${dx}%, ${dy}%)`,
+            width: `${width}em`
+        }}
+    />
+}
+
 const cornerImages: { [suit: string]: any } = {
-    "Diamonds": <img alt="" src="/images/diamonds.png" style={{ transform: "translate(-50%, -50%) scale(0.04)" }} />,
-    "Hearts": <img alt="" src="/images/hearts.png" style={{ transform: "translate(-50%, -50%) scale(0.04)" }} />,
-    "Clubs": <img alt="" src="/images/clubs.png" style={{ transform: "translate(-50%, -50%) scale(0.04)" }} />,
-    "Spades": <img alt="" src="/images/spades.png" style={{ transform: "translate(-50%, -50%) scale(0.04)" }} />,
+    "Diamonds": image("diamonds", 0.9),
+    "Hearts":   image("hearts",   0.9),
+    "Clubs":    image("clubs",    0.9),
+    "Spades":   image("spades",   0.9),
 }
 
 const numberImages: { [suit: string]: any } = {
-    "Diamonds": <img width="36em" alt="" src="/images/diamonds.png" style={{ transform: "translate(-50%, -50%)" }} />,
-    "Hearts": <img width="36em" alt="" src="/images/hearts.png" style={{ transform: "translate(-50%, -50%)" }} />,
-    "Clubs": <img width="36em" alt="" src="/images/clubs.png" style={{ transform: "translate(-50%, -50%)" }} />,
-    "Spades": <img width="36em" alt="" src="/images/spades.png" style={{ transform: "translate(-50%, -50%)" }} />,
+    "Diamonds": image("diamonds", 1.5),
+    "Hearts":   image("hearts",   1.5),
+    "Clubs":    image("clubs",    1.5),
+    "Spades":   image("spades",   1.5),
 }
 
 const jackImages: { [suit: string]: any } = {
-    "Diamonds": <img alt="" src="/images/diamonds-jack.png" style={{ transform: "translate(-50%, -50%) scale(0.2)" }} />,
-    "Hearts": <img alt="" src="/images/hearts-jack.png" style={{ transform: "translate(-50%, -50%) scale(0.2)" }} />,
-    "Clubs": <img alt="" src="/images/clubs-jack.png" style={{ transform: "translate(-50%, -50%) scale(0.2)" }} />,
-    "Spades": <img alt="" src="/images/spades-jack.png" style={{ transform: "translate(-50%, -50%) scale(0.2)" }} />,
+    "Diamonds": image("diamonds-jack", 4.5),
+    "Hearts":   image("hearts-jack",   4.5),
+    "Clubs":    image("clubs-jack",    4.5),
+    "Spades":   image("spades-jack",   4.5),
 }
 
 const kingImages: { [suit: string]: any } = {
-    "Diamonds": <img alt="" src="/images/diamonds-king.png" style={{ transform: "translate(-50%, -46%) scale(0.25)" }} />,
-    "Hearts": <img alt="" src="/images/hearts-king.png" style={{ transform: "translate(-50%, -46%) scale(0.25)" }} />,
-    "Clubs": <img alt="" src="/images/clubs-king.png" style={{ transform: "translate(-50%, -46%) scale(0.25)" }} />,
-    "Spades": <img alt="" src="/images/spades-king.png" style={{ transform: "translate(-50%, -46%) scale(0.25)" }} />,
+    "Diamonds": image("diamonds-king", 5, 0, 15),
+    "Hearts":   image("hearts-king",   5, 0, 15),
+    "Clubs":    image("clubs-king",    5, 0, 15),
+    "Spades":   image("spades-king",   5, 0, 15),
 }
 
 const aceImages: { [suit: string]: any } = {
-    "Diamonds": <img alt="" src="/images/diamonds-ace.png" style={{ transform: "translate(-50%, -50%) scale(0.25)" }} />,
-    "Hearts": <img alt="" src="/images/hearts-ace.png" style={{ transform: "translate(-50%, -50%) scale(0.25)" }} />,
-    "Clubs": <img alt="" src="/images/clubs-ace.png" style={{ transform: "translate(-50%, -50%) scale(0.25)" }} />,
-    "Spades": <img alt="" src="/images/spades-ace.png" style={{ transform: "translate(-50%, -50%) scale(0.25)" }} />,
+    "Diamonds": image("diamonds-ace", 5),
+    "Hearts":   image("hearts-ace",   5),
+    "Clubs":    image("clubs-ace",    5),
+    "Spades":   image("spades-ace",   5),
 }
 
 const specialImages: { [name: string]: { [suit: string]: any } } = {
@@ -46,7 +59,9 @@ const specialImages: { [name: string]: { [suit: string]: any } } = {
 const Corner: React.FC<{ card: ICard }> = ({ card }) => {
     const { suit, name } = card;
     return <>
-        <div className="position-corner">
+        <div className="position-corner" style={{
+            letterSpacing: (name === "Ten") ? "-0.1em" : "0em"
+        }}>
             <span>{geileWerteMap[name]}</span>
             <span className="position-symbol-corner">
                 {cornerImages[suit]}

@@ -8,9 +8,9 @@
     border: 0.07em solid black;
     background-color: white;
 
-    font-family: "Courier New, monospace";
+    font-family: "Courier New, serif";
 
-    font-size: 1.3em;
+    font-size: 1.2em;
 
     user-select: none;
 }
@@ -108,4 +108,11 @@
     position: absolute;
     left: 50%;
     top: 50%;
+}
+
+.card .position-center img {
+    display: inline-block;
+    position: absolute;
+    left: 0%;
+    top:  0%;
 }

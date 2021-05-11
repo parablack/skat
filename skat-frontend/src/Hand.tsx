@@ -2,8 +2,7 @@ import React from "react";
 import { Card } from "./Cards/ImageCard";
 import { ICard, IGameState } from "./State";
 
-const ratio = 84.9667 / 122.567   // ratio cardWidth/cardHeight (including colored border)
-const overlap = 0.55;              // between 0 and 1, smaller = larger overlap
+const ratio = 6 / 9.25   // ratio cardWidth/cardHeight (including colored border)
 
 function nextPlayer(s: string) {
     if (s === "Geber") return "Vorhand";
@@ -95,7 +94,7 @@ const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale 
                 let t = (index + 0.5) / cards.length;   // position on arc between 0 and 1
                 let [x, y, r] = f(t, b - a, theta);
                 x += a
-                y -= f(0.5, b - a, theta)[1] / 2;
+                y -= f(0.5, b - a, theta)[1];
                 return (
                     <span key={index} style={{
                         transform: `translate(${(x - index - 0.5) * 100}%, ${-ratio * y * 100}%) rotate(${r}rad) scale(${scale})`,
@@ -123,7 +122,8 @@ export const YourHand: React.FC<{ state: IGameState, onClickCard: (card: ICard) 
             scale={1}
         ></Hand>
         <div style={{
-            color: you.active ? "red" : "white"
+            color: you.active ? "red" : "white",
+            margin: "0.5em"
         }}>
             <div>{you.name}</div>
             <div><small>{you.position}</small></div>
