@@ -1,140 +1,138 @@
 import React from 'react';
-import { IGamePickingState, IHandPickingPhase, IReizState, ISkatPickingPhase } from './State';
+import { ReizPhase, PickingPhase, PublicInfo, PrivateInfo } from './State';
 
-export const ReizInput: React.FC<{ ws: WebSocket, state: IReizState }> = ({ ws, state }) => {
+export const ReizInput: React.FC<{ ws: WebSocket, phase: ReizPhase, publicInfo: PublicInfo, privateInfo?: PrivateInfo }> = ({ ws, phase, publicInfo, privateInfo }) => {
+  let textInput = React.useRef<HTMLInputElement>(null);
 
-    let textInput = React.useRef<HTMLInputElement>(null);
+  if (!privateInfo || !privateInfo.yourTurn) {
+    return (
+      <div style={{
+        textAlign: 'center',
+        verticalAlign: 'center'
+      }}>
+        Es wurde {phase.reizBid === 17 ? <>noch nix</> : phase.reizBid} geboten.
+      </div>
+    )
+  }
 
-    if (!state.yourTurn) {
-        return (
-            <div style={{
-                textAlign: 'center',
-                verticalAlign: 'center'
-            }}>
-                Es wurde {state.reizCurrentBid === 17 ? <>noch nix</> : state.reizCurrentBid} geboten.
-            </div>
-        )
-    }
+  if (phase.reizTurn) {
+    return (
+      <div>
+        Du darfst
+        <br />
+        <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
+          <input ref={textInput}
+            style={{ textAlign: "center" }}
+            type="number"
+            min={phase.reizBid}
+            max="264"
+            size={5}
+            defaultValue={phase.reizBid + 1}
+          />
+          <button className="unicode-button" onClick={() => {
+            ws.send(JSON.stringify({
+              action: "reizbid",
+              reizbid: parseInt(textInput!.current!.value),
+            }))
 
-    if (state.reizAnsagerTurn) {
-        return (
-            <div>
-                Du darfst
-                <br />
-                <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
-                    <input ref={textInput}
-                        style={{ textAlign: "center" }}
-                        type="number"
-                        min={state.reizCurrentBid}
-                        max="264"
-                        size={5}
-                        defaultValue={state.reizCurrentBid + 1}
-                    />
-                    <button className="unicode-button" onClick={() => {
-                        ws.send(JSON.stringify({
-                            action: "reizbid",
-                            reizbid: parseInt(textInput!.current!.value),
-                        }))
-
-                    }}>📈</button>
+          }}>📈</button>
           oder
           <button className="unicode-button" onClick={() => {
-                        ws.send(JSON.stringify({
-                            action: "reizweg",
-                        }))
-                    }}>📉</button>
-                </div>
-            </div>
-        )
-    } else {
-        return (
-            <div>
-                Es wurde {state.reizCurrentBid} geboten:
-                <br />
-                <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
-                    <button className="unicode-button" onClick={() => {
-                        ws.send(JSON.stringify({
-                            action: "reizanswer", value: true
-                        }))
-                    }}>&#x1F44D;</button>
-                  oder
+            ws.send(JSON.stringify({
+              action: "reizweg",
+            }))
+          }}>📉</button>
+        </div>
+      </div>
+    )
+  } else {
+    return (
+      <div>
+        Es wurde {phase.reizBid} geboten:
+        <br />
+        <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
           <button className="unicode-button" onClick={() => {
-                        ws.send(JSON.stringify({
-                            action: "reizanswer", value: false
-                        }))
-                    }}>&#x1F44E;</button>
-                </div>
-            </div>
-        )
-    }
-}
-
-
-export const HandPickInput: React.FC<{ ws: WebSocket, state: IHandPickingPhase }> = ({ ws, state }) => {
-    if (!state.yourTurn)
-        return <h1>{state.names[state.turn]} wählt Hand/nicht Hand ...</h1>
-
-    return (
-        <div>
-            <button onClick={() => {
-                ws.send(JSON.stringify({
-                    action: "playhand",
-                    hand: true,
-                }))
-            }}>Hand Spielen</button>
-            {" oder "}
-            <button onClick={() => {
-                ws.send(JSON.stringify({
-                    action: "playhand",
-                    hand: false,
-                }))
-            }}>Hand nicht Spielen</button>
+            ws.send(JSON.stringify({
+              action: "reizanswer", value: true
+            }))
+          }}>&#x1F44D;</button>
+            oder
+          <button className="unicode-button" onClick={() => {
+            ws.send(JSON.stringify({
+              action: "reizanswer", value: false
+            }))
+          }}>&#x1F44E;</button>
         </div>
+      </div>
     )
-}
-
-export const GamePickInput: React.FC<{ ws: WebSocket, state: IGamePickingState }> = ({ ws, state }) => {
-    let dropdown = React.useRef<HTMLSelectElement>(null);
-    let dropdown2 = React.useRef<HTMLSelectElement>(null);
-
-    if (!state.yourTurn)
-        return <h1>{state.names[state.turn]} wählt das Spiel ...</h1>
-
-    return (
-        <div>
-            <label>Was willst du spielen?</label>
-            <br />
-            <select ref={dropdown} defaultValue="ColorDiamonds">
-                <option value="ColorDiamonds">♦</option>
-                <option value="ColorHearts">♥</option>
-                <option value="ColorSpades">♠</option>
-                <option value="ColorClubs">♣</option>
-                <option value="Null">Null</option>
-                <option value="Grand">Grand</option>
-            </select>
-            <select ref={dropdown2} defaultValue="Normal">
-                <option value="Normal">Normal</option>
-                <option value="Schneider">Schneider</option>
-                <option value="Schwarz">Schwarz</option>
-                <option value="Ouvert">Ouvert</option>
-            </select>
-            <button onClick={() => {
-                ws.send(JSON.stringify({
-                    action: "playvariant",
-                    variant: dropdown!.current!.value,
-                    angesagt: dropdown2!.current!.value,
-                }))
-            }}>Spielen</button>
-        </div>
-    )
+  }
 }
 
 
 
-export const SkatPickInput: React.FC<{ ws: WebSocket, state: ISkatPickingPhase }> = ({ ws, state }) => {
-    if (!state.yourTurn)
-        return <h1>{state.names[state.turn]} wählt den Skat ...</h1>
+export const PickingInput: React.FC<{ ws: WebSocket, phase: PickingPhase, publicInfo: PublicInfo, privateInfo?: PrivateInfo }> = ({ ws, phase, publicInfo, privateInfo }) => {
+  let dropdown = React.useRef<HTMLSelectElement>(null);
+  let dropdown2 = React.useRef<HTMLSelectElement>(null);
+
+  if (!privateInfo || !privateInfo.yourTurn) {
+    return <h1>
+      {publicInfo.names[publicInfo.turn!] || publicInfo.turn!}
+      wählt das {{
+        DiscardingSkat: 'den Skat',
+        PickingHand: 'Hand/nicht Hand',
+        PickingGamemode: 'das Spiel'
+      }[phase.subPhase]}
+      ...
+    </h1>
+  }
+
+  if (phase.subPhase === 'PickingGamemode') {
     return (
-        <h1>Wähle deinen Skat ...</h1>
+      <div>
+        <label>Was willst du spielen?</label>
+        <br />
+        <select ref={dropdown} defaultValue="ColorDiamonds">
+          <option value="ColorDiamonds">♦</option>
+          <option value="ColorHearts">♥</option>
+          <option value="ColorSpades">♠</option>
+          <option value="ColorClubs">♣</option>
+          <option value="Null">Null</option>
+          <option value="Grand">Grand</option>
+        </select>
+        <select ref={dropdown2} defaultValue="Normal">
+          <option value="Normal">Normal</option>
+          <option value="Schneider">Schneider</option>
+          <option value="Schwarz">Schwarz</option>
+          <option value="Ouvert">Ouvert</option>
+        </select>
+        <button onClick={() => {
+          ws.send(JSON.stringify({
+            action: "playvariant",
+            variant: dropdown!.current!.value,
+            angesagt: dropdown2!.current!.value,
+          }))
+        }}>Spielen</button>
+      </div>
     )
+  } else if (phase.subPhase === 'DiscardingSkat') {
+    return <h1>Wähle deinen Skat ...</h1>
+  } else {
+    return (
+      <div>
+        <button onClick={() => {
+          ws.send(JSON.stringify({
+            action: "playhand",
+            hand: true,
+          }))
+        }}>Hand Spielen</button>
+        {" oder "}
+        <button onClick={() => {
+          ws.send(JSON.stringify({
+            action: "playhand",
+            hand: false,
+          }))
+        }}>Hand nicht Spielen</button>
+      </div>
+    )
+  }
 }

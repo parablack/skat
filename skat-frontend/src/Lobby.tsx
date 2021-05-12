@@ -1,6 +1,6 @@
-import { ILobbyState } from "./State"
+import { LobbyState } from "./State"
 
-export const LobbyInput: React.FC<{ ws: WebSocket, state: ILobbyState }> = ({ ws, state }) => {
+export const LobbyInput: React.FC<{ ws: WebSocket, state: LobbyState }> = ({ ws, state }) => {
   return <div className="App" style={{
     height: "100%",
     overflow: 'hidden',

@@ -1,28 +1,23 @@
 import React from "react";
 import { Card } from "./Cards/ImageCard";
-import { ICard, IGameState } from "./State";
+import { Card as ICard, Player, PrivateInfo, PublicInfo } from "./State";
 
 const ratio = 6 / 9.25   // ratio cardWidth/cardHeight (including colored border)
 
-function nextPlayer(s: string) {
+function nextPlayer(s: Player): Player {
     if (s === "Geber") return "Vorhand";
-    if (s === "Vorhand") return "Mittelhand";
-    if (s === "Mittelhand") return "Geber";
-    return "So ein Mist aber auch...";
+    else if (s === "Vorhand") return "Mittelhand";
+    else if (s === "Mittelhand") return "Geber";
+    else return s // s: never
 }
 
-function isActive(state: IGameState, s: string) {
-    if (state.phase === "finished") return false;
-    return state.turn === s
-}
 
-function createPlayerStruct(state: IGameState, pos: string) {
-    console.log(state)
+function createPlayerStruct(state: PublicInfo, pos: Player) {
     return {
         cards: state.cards[pos],
         name: state.names[pos],
         position: pos,
-        active: isActive(state, pos)
+        active: state.turn === pos
     }
 }
 
@@ -109,24 +104,21 @@ const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale 
 }
 
 
-export const YourHand: React.FC<{ state: IGameState, onClickCard: (card: ICard) => void }> = ({ state, onClickCard }) => {
-    let cards = state.you.cards;
-    let you = createPlayerStruct(state, state.you.position);
-
+export const YourHand: React.FC<{ publicInfo: PublicInfo, privateInfo: PrivateInfo, onClickCard: (card: ICard) => void }> = ({ publicInfo, privateInfo, onClickCard }) => {
     return <div>
         <Hand
-            cards={cards}
+            cards={privateInfo.yourCards}
             onClickCard={onClickCard}
             theta={27 * Math.PI / 180}
             overlap={0.5}
             scale={1}
         ></Hand>
         <div style={{
-            color: you.active ? "red" : "white",
+            color: privateInfo.yourTurn ? "red" : "white",
             margin: "0.5em"
         }}>
-            <div>{you.name}</div>
-            <div><small>{you.position}</small></div>
+            <div>{publicInfo.names[privateInfo.yourPosition] || privateInfo.yourPosition}</div>
+            <div><small>{privateInfo.yourPosition}</small></div>
         </div>
     </div>
 }
@@ -134,14 +126,13 @@ export const YourHand: React.FC<{ state: IGameState, onClickCard: (card: ICard) 
 
 
 export const OpponentHands: React.FC<{
-    state: IGameState,
+    publicInfo: PublicInfo,
+    ownPosition: Player,
     onChangePos: (pos: String) => void,
     statusElement: React.ReactNode
-}> = ({ state, onChangePos, statusElement }) => {
-
-    let you = state.you.position;
-    let left = createPlayerStruct(state, nextPlayer(you))
-    let right = createPlayerStruct(state, nextPlayer(nextPlayer(you)))
+}> = ({ publicInfo, onChangePos, statusElement, ownPosition }) => {
+    let left = createPlayerStruct(publicInfo, nextPlayer(ownPosition))
+    let right = createPlayerStruct(publicInfo, nextPlayer(nextPlayer(ownPosition)))
     return <div style={{
         display: 'flex',
         justifyContent: 'flex-start',

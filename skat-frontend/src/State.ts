@@ -1,110 +1,93 @@
-type Player = "Geber" | "Vorhand" | "Mittelhand"
+export type Player = "Geber" | "Vorhand" | "Mittelhand"
 
-export interface ICard { suit: string, name: string }
+export interface Card { suit: string, name: string }
 
-export interface IScoring { hand: boolean, angesagt: string }
+export interface ScoringInfo { hand: boolean, angesagt: string }
 
-export type Stich = ([ICard, Player])[]
+export type Stich = ([Card, Player])[]
 
-interface ICommonPlayerState {
-    resign: number,
-    you: IPlayerState,
-    names: { [player: string]: string },
-    cards: { [player: string]: ICard[] },
-    turn: string,
-    yourTurn: boolean
-    singlePlayer?: string,
+export type GameMode = { kind: "Ramsch" | "Null" | "Grand" } | {
+  kind: "Farbspiel",
+  color: string,
+};
+
+export interface ReizPhase {
+  phase: "ReizPhase",
+  reizTurn: Player,
+  reizBid: number,
 }
 
-export interface IPlayerState {
-    cards: ICard[],
-    woncards: ICard[],
-    position: Player
+export interface PickingPhase {
+  phase: "PickingPhase",
+  subPhase: "PickingHand" | "DiscardingSkat" | "PickingGamemode",
+  pickingPlayer: Player,
+  cardsToDiscard: number,
+  isPlayingHand: boolean,
 }
 
-export interface IRunningState extends ICommonPlayerState {
-    phase: "running",
-    gamemode: { kind: "Ramsch" | "Null" | "Grand" } | {
-        kind: "Farbspiel",
-        color: string,
-    },
-    currentStich: Stich,
-    lastStich: Stich,
-    scoring: IScoring
+export interface RunningPhase {
+  phase: "RunningPhase",
+  gameMode: GameMode,
+  scoring: ScoringInfo,
+  currentStich: Stich,
+  lastStich: Stich,
+  singlePlayer: Player | null
 }
 
-export interface IFinishedState extends ICommonPlayerState {
-    phase: "finished",
-    // player, won, game value, überreizt?
-    result: [string, boolean, number, boolean],
-    scores: { [player: string]: number },
-    currentStich: Stich
+export interface FinishedPhase {
+  phase: "FinishedPhase",
+  // player, won, game value, überreizt?
+  result: [string, boolean, number, boolean],
+  scores: { [player: string]: number },
+  currentStich: Stich
 }
 
-export interface IReizState extends ICommonPlayerState {
-    phase: "reizen",
-    reizAnsagerTurn: boolean,
-    reizCurrentBid: number,
-    resign: number
+export interface PublicInfo {
+  turn: Player | null,
+  cards: { [player: string]: Card[] },
+  names: { [player: string]: string },
+  numResigned: number,
+}
+export interface PrivateInfo {
+  yourPosition: Player,
+  yourTurn: boolean,
+  yourCards: Card[],
+  wonCards: Card[],
+  resigned: boolean,
+}
+export type Phase = ReizPhase | PickingPhase | RunningPhase | FinishedPhase
+
+
+export interface EmptyState {
+  type: "empty",
 }
 
-export interface IHandPickingPhase extends ICommonPlayerState {
-    phase: "handpicking",
+export interface PlayerState {
+  type: "playerState",
+  phase: Phase,
+  public: PublicInfo,
+  private: PrivateInfo,
 }
 
-export interface ISkatPickingPhase extends ICommonPlayerState {
-    phase: "skatpicking",
-    cardsToDiscard: ICard[]
+export interface SpectatorState {
+  type: "spectatorState",
+  phase: Phase,
+  public: PublicInfo,
+  private: PrivateInfo,
 }
 
-export interface IGamePickingState extends ICommonPlayerState {
-    phase: "gamepicking"
+export interface Lobby {
+  id: number,
+  name?: string,
+  names: { [player: string]: string },
 }
 
 
-export interface IEmptyState {
-    phase: "empty"
+export interface LobbyState {
+  type: "lobby",
+  lobbies: Lobby[],
 }
 
-export interface ILobby {
-    id: number,
-    name?: string,
-    names: { [player: string]: string },
-}
+export type State = EmptyState | LobbyState | PlayerState | SpectatorState
 
-export interface ILobbyState {
-    phase: "lobby",
-    lobbies: ILobby[],
-}
-
-export type IGameState = IReizState
-    | IHandPickingPhase
-    | ISkatPickingPhase
-    | IGamePickingState
-    | IRunningState
-    | IFinishedState
-
-export type IState = IEmptyState
-    | ILobbyState
-    | IReizState
-    | IHandPickingPhase
-    | ISkatPickingPhase
-    | IGamePickingState
-    | IRunningState
-    | IFinishedState
-
-export function inLobby(state: IState): state is IGameState {
-    return (
-        state.phase === 'reizen' ||
-        state.phase === 'handpicking' ||
-        state.phase === 'skatpicking' ||
-        state.phase === 'gamepicking' ||
-        state.phase === 'running' ||
-        state.phase === 'finished'
-    )
-}
-
-export const EMPTY_STATE: IState = { phase: "empty" }
-    // {phase: 'lobby', lobbies: [ { id: 0, name: 'Die Erste', names: { Vorhand: 'Mflo3000' } } ]}
-    // { "yourTurn": false, "gameMode": { kind: "farbspiel", color: "Spades" }, "phase": "running", "currentStich": [], "lastStich": [], "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0, cards: { "Geber": [], "Vorhand": [], "Mittelhand": [] } }
-    // { "yourTurn": true, "reizAnsagerTurn": true, "reizCurrentBid": 18, "phase": "reizen", "you": { "cards": [], "woncards": [], "position": "Vorhand" }, "turn": "Vorhand", "names": {}, "resign": 0 }
+export const EMPTY_STATE: State = { type: "empty" }
