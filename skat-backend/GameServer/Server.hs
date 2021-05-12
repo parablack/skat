@@ -18,6 +18,7 @@ import Prelude hiding (lookup)
 
 import Skat.Definitions hiding (Player, result, players)
 import Skat.Skat
+import GameServer.Protocol
 import GameServer.Definitions
 import Util
 
@@ -113,48 +114,89 @@ lobbyNameMap lobby = do
 
 {- =============================================================== -}
 
-buildLobbyForPlayer
-    :: (MonadState ServerData m, MonadError String m)
-    => Lobby -> m LobbyForPlayer
-buildLobbyForPlayer lobby@(Lobby num) = do
-    positions <- using lobby $ Map.map dataPlayer . dataPositions <$> get
-    maybePosAssocs <-
-        forM (Map.assocs positions) (\(position, maybePlayer) ->
-                case maybePlayer of
-                    Nothing -> return Nothing
-                    Just player -> do
-                        record <- lookup player
-                        return $ Just (position, dataPlayerName record)
-            )
-    lobbyRecord <- lookup lobby
-    return $ LobbyForPlayer {
-        lobbyId        = num,
-        lobbyName      = (dataLobbyName lobbyRecord),
-        lobbyPositions = (Map.fromList . catMaybes $ maybePosAssocs)
+
+buildPrivateInfo
+    :: (MonadState ServerData m, MonadError String m) => m PrivateInfo
+buildPrivateInfo player = do
+    return PrivateInfo -- TODO
+      { yourPosition = Geber
+      , yourTurn     = False
+      , yourCards    = []
+      , wonCards     = []
+      , resigned     = False
+      }
+
+
+censoredCards :: SkatState -> [PlayerPosition] -> Map PlayerPosition [CensoredCard]
+censoredCards state showingCards =
+    Map.fromList
+        [ ("Geber",      censor Geber)
+        , ("Vorhand",    censor Vorhand)
+        , ("Mittelhand", censor Mittelhand)
+        ]
+    where
+      censor position =
+          let player = playerFromPos state position
+              cards  = sort $ playerCards player
+          in List.map (\card ->
+                if position `elem` showingCards
+                    then NotCensored card
+                    else Censored
+            ) cards
+
+buildPublicInfo
+    :: (MonadState ServerData m, MonadError String m) => Lobby -> m PublicInfo
+buildPublicInfo lobby = do
+    positionAssocs <- using lobby $ Map.assocs . dataPositions <$> get
+    state   <- using lobby $ dataSkatState <$> get
+    nameMap <- lobbyNameMap lobby
+    let resigned = map fst . filter (dataResigned . snd) $ positionAssocs
+    let showingCards = List.map playerPosition $ List.filter showsCards (players state)
+    return PublicInfo
+      { pubTurn        = Nothing                -- TODO
+      , pubCards       = censoredCards state showingCards
+      , pubNames       = nameMap
+      , pubNumResigned = length resigned
+      }
+
+buildPhaseInfo :: SkatState -> PhaseInfo
+buildPhaseInfo phase@ReizPhase{} = ReizPhaseInfo
+    { reizTurn = reizAnsagerTurn state
+    , reizBid  = reizCurrentBid state
+    }
+buildPhaseInfo phase@HandPickingPhase{} = PickingPhaseInfo
+    { subPhase       = PickingHand
+    , pickingPlayer  = singlePlayer phase
+    , cardsToDiscard = (List.length . playerCards) (playerFromPos phase (singlePlayer phase)) - 10
+    , isPlayingHand  = Nothing -- TODO
+    }
+buildPhaseInfo phase@SkatPickingPhase{} = PickingPhaseInfo
+    { subPhase       = DiscardingSkat
+    , pickingPlayer  = singlePlayer phase
+    , cardsToDiscard = (List.length . playerCards) (playerFromPos phase (singlePlayer phase)) - 10
+    , isPlayingHand  = Nothing -- TODO
+    }
+buildPhaseInfo phase@GamePickingPhase{} = PickingPhaseInfo
+    { subPhase       = PickingGamemode
+    , pickingPlayer  = singlePlayer phase
+    , cardsToDiscard = (List.length . playerCards) (playerFromPos phase (singlePlayer phase)) - 10
+    , isPlayingHand  = Nothing -- TODO
+    }
+buildPhaseInfo phase@RunningPhase{} = RunningPhaseInfo
+    { gameMode     = gameMode phase
+    , scoring      = skatScoringInformation phase
+    , currentStich = List.reverse (currentStich phase)
+    , lastStich    = case playedStiche state of
+                        []    -> []
+                        (x:_) -> Data.List.reverse x
+    , singlePlayer = singlePlayer phase
+    }
+buildPhaseInfo phase@GameFinishedState{} = FinishedPhaseInfo
+    { lastStich     = List.reverse (lastStich phase)
+    , scores        = scores phase
+    , scoringResult = result phase
     }
 
-buildLobbyResponse
-    :: (MonadState ServerData m, MonadError String m) => m GameResponse
-buildLobbyResponse = do
-    lobbies <- Map.keys . dataLobbies <$> get
-    LobbyResponse <$> (sequence $ List.map buildLobbyForPlayer lobbies)
-
-sendLobbies
-    :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Player -> m ()
-sendLobbies player = do
-    record <- lookup player
-    buildLobbyResponse >>= liftIO . dataReply record
-
-broadcastLobbies
-    :: (MonadState ServerData m, MonadError String m, MonadIO m) => m ()
-broadcastLobbies = do
-    response <- buildLobbyResponse
-    players <- Map.keys . dataPlayers <$> get
-    forM_ players $ \player -> do
-        record <- lookup player
-        when (isNothing . dataLobby $ record) $
-            liftIO . dataReply record $ response
 
 broadcastSkatState
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
@@ -173,6 +215,48 @@ broadcastSkatState lobby = do
                     (StateResponse (SkatStateForPlayer position state nameMap numResigned))
         )
 
+buildLobbyInformation
+    :: (MonadState ServerData m, MonadError String m)
+    => Lobby -> m LobbyForPlayer
+buildLobbyInformation lobby@(Lobby num) = do
+    positions <- using lobby $ Map.map dataPlayer . dataPositions <$> get
+    maybePosAssocs <-
+        forM (Map.assocs positions) (\(position, maybePlayer) ->
+                case maybePlayer of
+                    Nothing -> return Nothing
+                    Just player -> do
+                        record <- lookup player
+                        return $ Just (position, dataPlayerName record)
+            )
+    lobbyRecord <- lookup lobby
+    return $ LobbyInformation {
+        lobbyId        = num,
+        lobbyName      = (dataLobbyName lobbyRecord),
+        lobbyPositions = (Map.fromList . catMaybes $ maybePosAssocs)
+    }
+
+buildLobbyResponse
+    :: (MonadState ServerData m, MonadError String m) => m GameResponse
+buildLobbyResponse = do
+    lobbies <- Map.keys . dataLobbies <$> get
+    LobbyResponse <$> (sequence $ List.map buildLobbyInformation lobbies)
+
+sendLobbies
+    :: (MonadState ServerData m, MonadError String m, MonadIO m)
+    => Player -> m ()
+sendLobbies player = do
+    record <- lookup player
+    buildLobbyResponse >>= liftIO . dataReply record
+
+broadcastLobbies
+    :: (MonadState ServerData m, MonadError String m, MonadIO m) => m ()
+broadcastLobbies = do
+    response <- buildLobbyResponse
+    players <- Map.keys . dataPlayers <$> get
+    forM_ players $ \player -> do
+        record <- lookup player
+        when (isNothing . dataLobby $ record) $
+            liftIO . dataReply record $ response
 
 {- =============================================================== -}
 

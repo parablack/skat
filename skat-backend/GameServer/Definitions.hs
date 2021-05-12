@@ -3,10 +3,6 @@
 {-# LANGUAGE FlexibleContexts       #-}
 
 module GameServer.Definitions (
-    GameRequest(..),
-    SkatStateForPlayer(..),
-    LobbyForPlayer(..),
-    GameResponse(..),
     Player(..),
     PlayerData(..),
     Lobby(..),
@@ -26,6 +22,8 @@ import qualified Data.Map as Map
 import Data.Maybe
 import Prelude hiding (lookup)
 
+import GameServer.Protocol
+
 import Skat.Definitions hiding (Player, result, players)
 import Skat.Skat
 
@@ -34,33 +32,6 @@ newtype Player = Player String
 
 newtype Lobby = Lobby Int
     deriving (Show, Eq, Ord)
-
-data GameRequest
-    = MakeMove SkatMove
-    | SetName String
-    | Resign
-    | LeaveLobby
-    | JoinLobby Int PlayerPosition
-    | ChangePosition PlayerPosition
-    deriving (Show, Eq)
-
-
-data SkatStateForPlayer = SkatStateForPlayer
-  { skatPosition         :: PlayerPosition,
-    skatState            :: SkatState,
-    skatPlayerNames      :: Map.Map String String,
-    skatResigningPlayers :: Int
-  }
-
-data LobbyForPlayer = LobbyForPlayer
-  { lobbyId        :: Int,
-    lobbyName      :: String,
-    lobbyPositions :: Map.Map PlayerPosition String
-  }
-
-data GameResponse
-    = StateResponse SkatStateForPlayer
-    | LobbyResponse [LobbyForPlayer]
 
 data PlayerData = PlayerData
   { dataPlayerName  :: String,

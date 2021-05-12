@@ -10,6 +10,7 @@ module Skat.Definitions(
      SkatMove(..),
      SkatScoringInformation(..),
      SkatGewinnstufe(..),
+     ScoringResult(..),
      deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn,
      allPlayerPositions
 ) where
@@ -120,6 +121,13 @@ nextPos Mittelhand = Geber
 allPlayerPositions :: [PlayerPosition]
 allPlayerPositions = [Geber, Vorhand, Mittelhand]
 
+data ScoringResult = ScoringResult
+  { scoringPosition      :: PlayerPosition
+  , scoringHasWon        :: Bool
+  , scoringGameValue     :: Int
+  , scoringHasUeberreizt :: Bool
+  }
+  deriving (Eq, Show)
 
 data SkatState =
     ReizPhase {
@@ -159,8 +167,7 @@ data SkatState =
         players :: [Player],
         lastStich :: Stich,
         scores :: Map PlayerPosition Int,
-        -- pos, hasWon?, game value, ueberreizt?
-        result :: (PlayerPosition, Bool, Int, Bool),
+        result :: ScoringResult,
         skatScoringInformation :: SkatScoringInformation
     }
     deriving (Eq, Show)

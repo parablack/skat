@@ -125,7 +125,7 @@ checkGameEnd state = if hasGameEnded state then
         players = players state,
         lastStich = head $ playedStiche state,
         scores = scores,
-        result = (fst winner, hasWon, value, ueberreizt),
+        result = ScoringResult (fst winner) hasWon value ueberreizt,
         skatScoringInformation = skatScoringInformation state
     }
     else state
