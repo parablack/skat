@@ -1,10 +1,16 @@
-module Skat.Skat(play, showCards, gameModeFromString, playerFromPos, playersFromDeck, initialStateFromDeck) where
+module Skat.Skat
+    ( play
+    , showCards
+    , playerFromPos
+    , playersFromDeck
+    , initialStateFromDeck
+    ) where
 
 import Control.Monad.Except
 import Data.List
 import qualified Data.Map
 import Skat.Definitions
-import Skat.Gamemodes
+import Skat.GameModes
 import Util
 
 {- ======== player util functions =============== -}
@@ -51,17 +57,6 @@ playersFromDeck deck = [Player Geber (slice 0 9 deck) [] False,
 -- newtype GamemodeFarbspiel = GamemodeFarbspiel Suit
 -- data GamemodeGrand =     GamemodeGrand
 -- data GamemodeNull =      GamemodeNull
-
-gameModeFromString :: String -> Hopefully GameMode
--- gameModeFromString "Ramsch" = mRamsch -- Cannot be chosen
-gameModeFromString "Null" = return mNull
-gameModeFromString "Grand" = return mGrand
-gameModeFromString "ColorHearts" = return $ mColor Hearts
-gameModeFromString "ColorSpades" = return $ mColor Spades
-gameModeFromString "ColorDiamonds" = return $ mColor Diamonds
-gameModeFromString "ColorClubs" = return $ mColor Clubs
-gameModeFromString "Ramsch" = throwError "Ramsch cannot be actively played"
-gameModeFromString _ = throwError "Invalid game variant. Do you even h4xx?"
 
 skatFromDeck :: [Card] -> [Card]
 skatFromDeck deck = slice 30 31 deck

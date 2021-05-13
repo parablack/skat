@@ -53,6 +53,7 @@ export interface PrivateInfo {
   yourTurn: boolean,
   yourCards: Card[],
   wonCards: Card[],
+  showingCards: boolean,
   resigned: boolean,
 }
 export type Phase = ReizPhase | PickingPhase | RunningPhase | FinishedPhase

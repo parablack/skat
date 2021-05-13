@@ -11,7 +11,7 @@ module Skat.Definitions(
      SkatScoringInformation(..),
      SkatGewinnstufe(..),
      ScoringResult(..),
-     deck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn,
+     defaultDeck, nextPos, suits, names, nameValue, suitValue, simpleCompatible, simpleCardLE, activeReizPlayer, passiveReizPlayer, reizTurn,
      allPlayerPositions
 ) where
 
@@ -65,8 +65,8 @@ suits = [Clubs, Diamonds, Hearts, Spades]
 names :: [Name]
 names = [Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
 
-deck :: [Card]
-deck = [Card name suit | name <- names, suit <- suits]
+defaultDeck :: [Card]
+defaultDeck = [Card name suit | name <- names, suit <- suits]
 
 
 

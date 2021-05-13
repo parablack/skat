@@ -2,15 +2,23 @@
 
 module Serializer where
 
-import Data.List
-import Skat.Definitions hiding (SkatState(..), Player(..), reizTurn)
+import Skat.Definitions
+    ( PlayerPosition(..)
+    , Card(..)
+    , GameMode(..)
+    , SkatScoringInformation(..)
+    , ScoringResult(..)
+    , SkatGewinnstufe(..)
+    , SkatMove(..)
+    , Reizwert(..)
+    )
+import Skat.GameModes (gameModeFromString)
+
 import GameServer.Protocol
-import GameServer.Definitions hiding (Player)
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Text
 import qualified Data.Map as Map
-import Skat.Skat
 
 instance ToJSON Card where
     toJSON (Card name suit) =
@@ -49,19 +57,20 @@ instance ToJSON ScoringResult where
 
 instance ToJSON PublicInfo where
     toJSON info =
-        object [ "turn"           .= pubTurn info
-               , "cards"          .= (Map.mapKeys show $ pubCards info)
-               , "names"          .= (Map.mapKeys show $ pubNames info)
-               , "pubNumResigned" .= pubNumResigned info
+        object [ "turn"           .= infoTurn info
+               , "cards"          .= Map.mapKeys show (infoCards info)
+               , "names"          .= Map.mapKeys show (infoNames info)
+               , "pubNumResigned" .= infoNumResigned info
                ]
 
 instance ToJSON PrivateInfo where
    toJSON info =
-       object [ "yourPosition" .= yourPosition info
-              , "yourTurn"     .= yourTurn info
-              , "yourCards"    .= yourCards info
-              , "wonCards"     .= wonCards info
-              , "resigned"     .= resigned info
+       object [ "yourPosition" .= infoYourPosition info
+              , "yourTurn"     .= infoYourTurn info
+              , "yourCards"    .= infoYourCards info
+              , "wonCards"     .= infoWonCards info
+              , "showingCards" .= infoShowingCards info
+              , "resigned"     .= infoResigned info
               ]
 
 instance ToJSON PickingSubPhase where
@@ -69,40 +78,40 @@ instance ToJSON PickingSubPhase where
 
 instance ToJSON PhaseInfo where
     toJSON phase@ReizPhaseInfo{} =
-        object [ "phase"    .= pack "ReizPhase"
-               , "reizTurn" .= reizTurn phase
-               , "reizBid"  .= reizBid phase
+        object [ "phase"         .= pack "ReizPhase"
+               , "isAnsagerTurn" .= infoIsAnsagerTurn phase
+               , "bid"           .= infoBid phase
                ]
 
     toJSON phase@PickingPhaseInfo{} =
         object [ "phase"          .= pack "PickingPhase"
-               , "subPhase"       .= subPhase phase
-               , "pickingPlayer"  .= pickingPlayer phase
-               , "cardsToDiscard" .= cardsToDiscard phase
-               , "isPlayingHand"  .= isPlayingHand phase
+               , "subPhase"       .= infoSubPhase phase
+               , "pickingPlayer"  .= infoPickingPlayer phase
+               , "cardsToDiscard" .= infoCardsToDiscard phase
+               , "isPlayingHand"  .= infoIsPlayingHand phase
                ]
 
     toJSON phase@RunningPhaseInfo{} =
         object [ "phase"        .= pack "RunningPhase"
-               , "gameMode"     .= gameMode phase
-               , "scoring"      .= scoring phase
-               , "currentStich" .= currentStich phase
-               , "lastStich"    .= lastStich phase
-               , "singlePlayer" .= singlePlayer phase
+               , "gameMode"     .= infoGameMode phase
+               , "scoring"      .= infoScoring phase
+               , "currentStich" .= infoCurrentStich phase
+               , "lastStich"    .= infoLastStich phase
+               , "singlePlayer" .= infoSinglePlayer phase
                ]
 
     toJSON phase@FinishedPhaseInfo{} =
         object [ "phase"         .= pack "FinishedPhase"
-               , "lastStich"     .= lastStich phase
-               , "scores"        .= (Map.mapKeys show $ scores phase)
-               , "scoringResult" .= scoringResult phase
+               , "lastStich"     .= infoLastStich phase
+               , "scores"        .= Map.mapKeys show (infoScores phase)
+               , "scoringResult" .= infoScoringResult phase
                ]
 
 instance ToJSON LobbyInformation where
-    toJSON LobbyInformation{lobbyId=num, lobbyName=name, lobbyPositions=pos} =
-        object [ "id"    .= num
-               , "name"  .= name
-               , "names" .= Map.mapKeys show pos
+    toJSON lobby@LobbyInformation{} =
+        object [ "id"    .= infoLobbyId lobby
+               , "name"  .= infoLobbyName lobby
+               , "names" .= Map.mapKeys show (infoLobbyPositions lobby)
                ]
 
 instance ToJSON GameResponse where

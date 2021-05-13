@@ -25,56 +25,60 @@ data GameRequest
     deriving (Show, Eq)
 
 
-data CensoredCard = Censored | NotCensored Card
+data CensoredCard
+    = Censored
+    | NotCensored Card
+    deriving (Show, Eq, Ord)
 
 
 data PublicInfo = PublicInfo
-  { pubTurn        :: Maybe PlayerPosition
-  , pubCards       :: Map.Map PlayerPosition [CensoredCard]
-  , pubNames       :: Map.Map PlayerPosition String
-  , pubNumResigned :: Int
-  }
+    { infoTurn        :: Maybe PlayerPosition
+    , infoCards       :: Map.Map PlayerPosition [CensoredCard]
+    , infoNames       :: Map.Map PlayerPosition String
+    , infoNumResigned :: Int
+    }
 
 data PrivateInfo = PrivateInfo
-  { yourPosition :: PlayerPosition
-  , yourTurn     :: Bool
-  , yourCards    :: [Card]
-  , wonCards     :: [Card]
-  , resigned     :: Bool
-  }
+    { infoYourPosition :: PlayerPosition
+    , infoYourTurn     :: Bool
+    , infoYourCards    :: [Card]
+    , infoWonCards     :: [Card]
+    , infoShowingCards :: Bool
+    , infoResigned     :: Bool
+    }
 
 data PickingSubPhase = PickingHand | DiscardingSkat | PickingGamemode
     deriving (Eq, Ord, Show)
 
 data PhaseInfo
     = ReizPhaseInfo
-      { reizTurn :: PlayerPosition
-      , reizBid  :: Int
-      }
+        { infoIsAnsagerTurn :: Bool
+        , infoBid           :: Int
+        }
     | PickingPhaseInfo
-      { subPhase       :: PickingSubPhase
-      , pickingPlayer  :: PlayerPosition
-      , cardsToDiscard :: Int
-      , isPlayingHand  :: Maybe Bool
-      }
+        { infoSubPhase       :: PickingSubPhase
+        , infoPickingPlayer  :: PlayerPosition
+        , infoCardsToDiscard :: Int
+        , infoIsPlayingHand  :: Maybe Bool
+        }
     | RunningPhaseInfo
-      { gameMode     :: GameMode
-      , scoring      :: SkatScoringInformation
-      , currentStich :: Stich
-      , lastStich    :: Stich
-      , singlePlayer :: Maybe PlayerPosition
-      }
+        { infoGameMode     :: GameMode
+        , infoScoring      :: SkatScoringInformation
+        , infoCurrentStich :: Stich
+        , infoLastStich    :: Stich
+        , infoSinglePlayer :: Maybe PlayerPosition
+        }
     | FinishedPhaseInfo
-      { lastStich     :: Stich
-      , scores        :: Map.Map PlayerPosition Int
-      , scoringResult :: ScoringResult
-      }
+        { infoLastStich     :: Stich
+        , infoScores        :: Map.Map PlayerPosition Int
+        , infoScoringResult :: ScoringResult
+        }
 
 data LobbyInformation = LobbyInformation
-  { lobbyId        :: Int
-  , lobbyName      :: String
-  , lobbyPositions :: Map.Map PlayerPosition String
-  }
+    { infoLobbyId        :: Int
+    , infoLobbyName      :: String
+    , infoLobbyPositions :: Map.Map PlayerPosition String
+    }
 
 data GameResponse
     = StatePlayerResponse PhaseInfo PublicInfo PrivateInfo

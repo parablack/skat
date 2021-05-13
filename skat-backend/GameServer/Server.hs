@@ -16,7 +16,7 @@ import qualified Data.List as List
 import qualified Data.Map  as Map
 import Prelude hiding (lookup)
 
-import Skat.Definitions hiding (Player, result, players)
+import Skat.Definitions hiding (Player)
 import Skat.Skat
 import GameServer.Protocol
 import GameServer.Definitions
@@ -70,13 +70,11 @@ removePlayerFromLobby player = do
 
 newGame :: (MonadState LobbyData m, MonadIO m) => m ()
 newGame = do
-    shuffled <- shuffle deck
-    modify (\lobby ->
-        lobby{ dataSkatState = initialStateFromDeck shuffled }
-        )
-    forM_ allPlayerPositions (\position ->
-            adjust position (\record -> record{ dataResigned  = False })
-        )
+    shuffled <- shuffle defaultDeck
+    modify $ \lobby ->
+        lobby {dataSkatState = initialStateFromDeck shuffled}
+    forM_ allPlayerPositions $ \position ->
+        adjust position (\record -> record {dataResigned  = False})
 
 changePositions
     :: MonadState LobbyData m
@@ -103,42 +101,56 @@ checkRestartGame = do
 
 lobbyNameMap
     :: (MonadState ServerData m, MonadError String m)
-    => Lobby -> m (Map.Map String String)
+    => Lobby -> m (Map.Map PlayerPosition String)
 lobbyNameMap lobby = do
     players <- using lobby $
         catMaybes . map dataPlayer . Map.elems . dataPositions <$> get
-    positionNames <- using lobby $
-        map show <$> mapM lookupPlayerPosition players
+    positionNames <- using lobby $ mapM lookupPlayerPosition players
     playerNames <- map dataPlayerName <$> mapM lookup players
     return $ Map.fromList $ zip positionNames playerNames
 
 {- =============================================================== -}
 
 
+currentTurn :: SkatState -> Maybe PlayerPosition
+currentTurn state@ReizPhase{}         = reizTurn state
+currentTurn state@SkatPickingPhase{}  = singlePlayer state
+currentTurn state@GamePickingPhase{}  = singlePlayer state
+currentTurn state@HandPickingPhase{}  = singlePlayer state
+currentTurn state@RunningPhase{}      = Just $ turn state
+currentTurn       GameFinishedState{} = Nothing
+
+
 buildPrivateInfo
-    :: (MonadState ServerData m, MonadError String m) => m PrivateInfo
+    :: (MonadState ServerData m, MonadError String m) => Player -> m PrivateInfo
 buildPrivateInfo player = do
-    return PrivateInfo -- TODO
-      { yourPosition = Geber
-      , yourTurn     = False
-      , yourCards    = []
-      , wonCards     = []
-      , resigned     = False
-      }
+    lobby    <- lookupLobby player
+    position <- using lobby $ lookupPlayerPosition player
+    state    <- using lobby $ dataSkatState <$> get
+    resigned <- using lobby $ dataResigned <$> lookup position
+    let statePlayer = playerFromPos state position
+    return PrivateInfo
+        { infoYourPosition = position
+        , infoYourTurn     = (currentTurn state == Just position)
+        , infoYourCards    = playerCards statePlayer
+        , infoWonCards     = wonCards statePlayer
+        , infoShowingCards = showsCards statePlayer
+        , infoResigned     = resigned
+        }
 
-
-censoredCards :: SkatState -> [PlayerPosition] -> Map PlayerPosition [CensoredCard]
+censoredCards :: SkatState -> [PlayerPosition] -> Map.Map PlayerPosition [CensoredCard]
 censoredCards state showingCards =
     Map.fromList
-        [ ("Geber",      censor Geber)
-        , ("Vorhand",    censor Vorhand)
-        , ("Mittelhand", censor Mittelhand)
+        [ (Geber,      censor Geber)
+        , (Vorhand,    censor Vorhand)
+        , (Mittelhand, censor Mittelhand)
         ]
-    where
-      censor position =
-          let player = playerFromPos state position
-              cards  = sort $ playerCards player
-          in List.map (\card ->
+  where
+    censor :: PlayerPosition -> [CensoredCard]
+    censor position =
+        let player = playerFromPos state position
+            cards  = List.sort $ playerCards player
+         in List.map (\card ->
                 if position `elem` showingCards
                     then NotCensored card
                     else Censored
@@ -153,48 +165,51 @@ buildPublicInfo lobby = do
     let resigned = map fst . filter (dataResigned . snd) $ positionAssocs
     let showingCards = List.map playerPosition $ List.filter showsCards (players state)
     return PublicInfo
-      { pubTurn        = Nothing                -- TODO
-      , pubCards       = censoredCards state showingCards
-      , pubNames       = nameMap
-      , pubNumResigned = length resigned
-      }
+        { infoTurn        = currentTurn state
+        , infoCards       = censoredCards state showingCards
+        , infoNames       = nameMap
+        , infoNumResigned = length resigned
+        }
 
 buildPhaseInfo :: SkatState -> PhaseInfo
 buildPhaseInfo phase@ReizPhase{} = ReizPhaseInfo
-    { reizTurn = reizAnsagerTurn state
-    , reizBid  = reizCurrentBid state
+    { infoIsAnsagerTurn = reizAnsagerTurn phase
+    , infoBid           = reizCurrentBid phase
     }
+
 buildPhaseInfo phase@HandPickingPhase{} = PickingPhaseInfo
-    { subPhase       = PickingHand
-    , pickingPlayer  = singlePlayer phase
-    , cardsToDiscard = (List.length . playerCards) (playerFromPos phase (singlePlayer phase)) - 10
-    , isPlayingHand  = Nothing -- TODO
+    { infoSubPhase       = PickingHand
+    , infoPickingPlayer  = fromJust (singlePlayer phase)
+    , infoCardsToDiscard = (List.length . playerCards) (playerFromPos phase (fromJust $ singlePlayer phase)) - 10
+    , infoIsPlayingHand  = Nothing -- TODO
     }
 buildPhaseInfo phase@SkatPickingPhase{} = PickingPhaseInfo
-    { subPhase       = DiscardingSkat
-    , pickingPlayer  = singlePlayer phase
-    , cardsToDiscard = (List.length . playerCards) (playerFromPos phase (singlePlayer phase)) - 10
-    , isPlayingHand  = Nothing -- TODO
+    { infoSubPhase       = DiscardingSkat
+    , infoPickingPlayer  = fromJust (singlePlayer phase)
+    , infoCardsToDiscard = (List.length . playerCards) (playerFromPos phase (fromJust $ singlePlayer phase)) - 10
+    , infoIsPlayingHand  = Nothing -- TODO
     }
 buildPhaseInfo phase@GamePickingPhase{} = PickingPhaseInfo
-    { subPhase       = PickingGamemode
-    , pickingPlayer  = singlePlayer phase
-    , cardsToDiscard = (List.length . playerCards) (playerFromPos phase (singlePlayer phase)) - 10
-    , isPlayingHand  = Nothing -- TODO
+    { infoSubPhase       = PickingGamemode
+    , infoPickingPlayer  = fromJust (singlePlayer phase)
+    , infoCardsToDiscard = (List.length . playerCards) (playerFromPos phase (fromJust $ singlePlayer phase)) - 10
+    , infoIsPlayingHand  = Nothing -- TODO
     }
+
 buildPhaseInfo phase@RunningPhase{} = RunningPhaseInfo
-    { gameMode     = gameMode phase
-    , scoring      = skatScoringInformation phase
-    , currentStich = List.reverse (currentStich phase)
-    , lastStich    = case playedStiche state of
-                        []    -> []
-                        (x:_) -> Data.List.reverse x
-    , singlePlayer = singlePlayer phase
+    { infoGameMode     = gameMode phase
+    , infoScoring      = skatScoringInformation phase
+    , infoCurrentStich = List.reverse (currentStich phase)
+    , infoLastStich    = case playedStiche phase of
+                            []    -> []
+                            (x:_) -> List.reverse x
+    , infoSinglePlayer = singlePlayer phase
     }
+
 buildPhaseInfo phase@GameFinishedState{} = FinishedPhaseInfo
-    { lastStich     = List.reverse (lastStich phase)
-    , scores        = scores phase
-    , scoringResult = result phase
+    { infoLastStich     = List.reverse (lastStich phase)
+    , infoScores        = scores phase
+    , infoScoringResult = result phase
     }
 
 
@@ -202,22 +217,22 @@ broadcastSkatState
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
     => Lobby -> m ()
 broadcastSkatState lobby = do
-    positionAssocs <- using lobby $ Map.assocs . dataPositions <$> get
+    publicInfo <- buildPublicInfo lobby
     state <- using lobby $ dataSkatState <$> get
-    let numResigned  = length . filter (dataResigned . snd) $ positionAssocs
-    nameMap          <- lobbyNameMap lobby
-    forM_ positionAssocs ( \(position, record) ->
+    let phaseInfo = buildPhaseInfo state
+    positionRecords <- using lobby $ Map.elems . dataPositions <$> get
+    forM_ positionRecords $ \record ->
         case dataPlayer record of
             Nothing     -> return ()
             Just player -> do
+                privateInfo <- buildPrivateInfo player
                 playerRecord <- lookup player
-                (liftIO . dataReply playerRecord)
-                    (StateResponse (SkatStateForPlayer position state nameMap numResigned))
-        )
+                liftIO . dataReply playerRecord $
+                    StatePlayerResponse phaseInfo publicInfo privateInfo
 
 buildLobbyInformation
     :: (MonadState ServerData m, MonadError String m)
-    => Lobby -> m LobbyForPlayer
+    => Lobby -> m LobbyInformation
 buildLobbyInformation lobby@(Lobby num) = do
     positions <- using lobby $ Map.map dataPlayer . dataPositions <$> get
     maybePosAssocs <-
@@ -230,9 +245,9 @@ buildLobbyInformation lobby@(Lobby num) = do
             )
     lobbyRecord <- lookup lobby
     return $ LobbyInformation {
-        lobbyId        = num,
-        lobbyName      = (dataLobbyName lobbyRecord),
-        lobbyPositions = (Map.fromList . catMaybes $ maybePosAssocs)
+        infoLobbyId        = num,
+        infoLobbyName      = (dataLobbyName lobbyRecord),
+        infoLobbyPositions = (Map.fromList . catMaybes $ maybePosAssocs)
     }
 
 buildLobbyResponse
@@ -331,7 +346,6 @@ handlePlayerAction player Resign = do
 handlePlayerAction client (JoinLobby uid position) = do
     let lobby = Lobby uid
     addPlayerToLobby client lobby position
-    players <- Map.keys . dataPlayers <$> get
     broadcastSkatState lobby
     broadcastLobbies
 
@@ -340,7 +354,6 @@ handlePlayerAction player LeaveLobby = do
     removePlayerFromLobby player
     broadcastSkatState lobby
     broadcastLobbies
-
 
 handlePlayerAction player (ChangePosition newPlayerPosition) = do
     lobby <- lookupLobby player
@@ -352,6 +365,9 @@ handlePlayerAction player (ChangePosition newPlayerPosition) = do
     using lobby $ changePositions newPosition
     broadcastSkatState lobby
     broadcastLobbies
+
+handlePlayerAction _ (SpectateLobby _) = do
+    throwError "SpectateLobby not implemented!"
 
 
 joinFreeLobby

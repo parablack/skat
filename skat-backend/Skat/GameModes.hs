@@ -1,10 +1,17 @@
-module Skat.Gamemodes(mRamsch, mGrand, mColor, mNull) where
+module Skat.GameModes
+    ( mRamsch
+    , mGrand
+    , mColor
+    , mNull
+    , gameModeFromString
+    ) where
 
 import Skat.Definitions
 import Data.Map
 import Data.List
 import Data.Ord
 import Data.Maybe
+import Control.Monad.Except
 
 
 sumCards :: [Card] -> Int
@@ -141,6 +148,17 @@ mNull = GameMode {
                                 _ -> error "Null but nobody played??",
     nicesShow = ("Null", "")
 }
+
+gameModeFromString :: String -> Hopefully GameMode
+-- gameModeFromString "Ramsch" = mRamsch -- Cannot be chosen
+gameModeFromString "Null" = return mNull
+gameModeFromString "Grand" = return mGrand
+gameModeFromString "ColorHearts" = return $ mColor Hearts
+gameModeFromString "ColorSpades" = return $ mColor Spades
+gameModeFromString "ColorDiamonds" = return $ mColor Diamonds
+gameModeFromString "ColorClubs" = return $ mColor Clubs
+gameModeFromString "Ramsch" = throwError "Ramsch cannot be actively played"
+gameModeFromString _ = throwError "Invalid game variant. Do you even h4xx?"
 
 {- ========= scoring ========== -}
 

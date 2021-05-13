@@ -65,7 +65,7 @@ emptyLobbyData = LobbyData
         (Vorhand,    emptyPositionData),
         (Mittelhand, emptyPositionData)
         ],
-    dataSkatState = initialStateFromDeck deck,
+    dataSkatState = initialStateFromDeck defaultDeck,
     dataLobbyName = "[No Name]"
   }
 
