@@ -120,6 +120,15 @@ currentTurn state@HandPickingPhase{}  = singlePlayer state
 currentTurn state@RunningPhase{}      = Just $ turn state
 currentTurn       GameFinishedState{} = Nothing
 
+compareByMode :: SkatState -> Card -> Card -> Ordering
+compareByMode state a b
+    | (cmpLE a b) && (cmpLE b a) = EQ
+    | cmpLE a b                  = LT
+    | otherwise                  = GT
+  where
+    cmpLE = case state of
+        phase@RunningPhase{} -> cardSmaller $ gameMode phase
+        _                    -> simpleCardLE
 
 buildPrivateInfo
     :: (MonadState ServerData m, MonadError String m) => Player -> m PrivateInfo
@@ -133,7 +142,7 @@ buildPrivateInfo player = do
         { infoYourPosition = position
         , infoYourTurn     = (currentTurn state == Just position)
         , infoYourCards    = playerCards statePlayer
-        , infoWonCards     = wonCards statePlayer
+        , infoWonCards     = List.sortBy (compareByMode state) $ wonCards statePlayer
         , infoShowingCards = showsCards statePlayer
         , infoResigned     = resigned
         }
@@ -149,7 +158,7 @@ censoredCards state showingCards =
     censor :: PlayerPosition -> [CensoredCard]
     censor position =
         let player = playerFromPos state position
-            cards  = List.sort $ playerCards player
+            cards  = List.sortBy (compareByMode state) $ playerCards player
          in List.map (\card ->
                 if position `elem` showingCards
                     then NotCensored card
