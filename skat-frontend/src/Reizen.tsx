@@ -79,7 +79,7 @@ export const PickingInput: React.FC<{ ws: WebSocket, phase: PickingPhase, public
       {publicInfo.names[publicInfo.turn!] || publicInfo.turn!}
       {' '} wählt {{
         DiscardingSkat: 'den Skat',
-        PickingHand: 'Hand/nicht Hand',
+        PickingHand: '✋/nicht ✋',
         PickingGamemode: 'das Spiel'
       }[phase.subPhase]}
       ...

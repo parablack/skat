@@ -23,14 +23,17 @@ sumCards = sum . Data.List.map (\(Card name _) -> nameValue name)
 simpleWinner :: Map PlayerPosition [Card] -> PlayerPosition
 simpleWinner = fst . maximumBy (comparing (sumCards . snd)) . assocs
 
+isRamschDurchmarsch :: Map PlayerPosition [Card] -> Bool
+isRamschDurchmarsch map = maximum scores == sum scores
+    where scores = sumCards <$> elems map
 -- meine stiche
 scoreSufficient :: SkatGewinnstufe -> [Card] -> Bool
 scoreSufficient angesagt cards
-    | angesagt == Normal    && (sumCards cards)  > 60   = True
-    | angesagt == Schneider && (sumCards cards) >= 90  = True
-    | angesagt == Schwarz   && (length   cards) == 32  = True
-    | angesagt == Ouvert    && (length   cards) == 32  = True
-    | otherwise                                        = False
+    | angesagt == Normal    && sumCards cards  > 60  = True
+    | angesagt == Schneider && sumCards cards >= 90  = True
+    | angesagt == Schwarz   && length   cards == 32  = True
+    | angesagt == Ouvert    && length   cards == 32  = True
+    | otherwise                                      = False
 
 singlePlayerHasWon :: PlayerPosition -> SkatScoringInformation -> Map PlayerPosition [Card] -> Bool
 singlePlayerHasWon pos SkatScoringInformation{angesagteStufe=stufe} cards = scoreSufficient stufe (cards ! pos)
@@ -41,7 +44,7 @@ mRamsch = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
     gameValue = \_ x -> sumCards x,
-    determineGameWinner = \_ _ scores -> (simpleWinner scores, False),
+    determineGameWinner = \_ _ scores -> (simpleWinner scores, isRamschDurchmarsch scores),
     nicesShow = ("Ramsch", "")
 }
 
@@ -78,13 +81,13 @@ factorGewinnstufe state@SkatScoringInformation{angesagteStufe=stufe} myCards
     | otherwise                          = error "I think this is exhaustive"
     where handBonus = if isHand state then 1 else 0
           schneider = sumCards myCards >= 90 || sumCards myCards <= 30
-          schwarz   = length myCards == 32   || length myCards == 0
+          schwarz   = length myCards == 32   || Data.List.null myCards
 
 mGrand :: GameMode
 mGrand = GameMode {
     cardsCompatible = simpleCompatible,
     cardSmaller = simpleCardLE,
-    gameValue = \x cards -> 24 * ((factorGameValue bubenSpitzen x) + (factorGewinnstufe x cards)),
+    gameValue = \x cards -> 24 * (factorGameValue bubenSpitzen x + factorGewinnstufe x cards),
     determineGameWinner = \x info cards -> case x of
                                 Just player -> (player, singlePlayerHasWon player info cards)
                                 _ -> error "Grand but nobody played??",
