@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+
+
 module Skat.GameModes
     ( mRamsch
     , mGrand
@@ -72,6 +75,7 @@ factorGewinnstufe state@SkatScoringInformation{angesagteStufe=stufe} myCards
     | stufe == Schneider || schwarz      = 3 + handBonus -- schneider angesagt
     | schneider                          = 2 + handBonus -- schneider
     | stufe == Normal                    = 1 + handBonus -- normal
+    | otherwise                          = error "I think this is exhaustive"
     where handBonus = if isHand state then 1 else 0
           schneider = sumCards myCards >= 90 || sumCards myCards <= 30
           schwarz   = length myCards == 32   || length myCards == 0

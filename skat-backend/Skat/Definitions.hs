@@ -190,6 +190,7 @@ passiveReizPlayer VorhandNix = Nothing
 reizTurn :: SkatState -> Maybe PlayerPosition
 reizTurn ReizPhase{reizAnsagerTurn=False, reizStateMachine=machine} = passiveReizPlayer machine
 reizTurn ReizPhase{reizAnsagerTurn=True, reizStateMachine=machine} = return $ activeReizPlayer machine
+reizTurn _ = Nothing
 
 data SkatMove
     = PlayCard Card

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+
 module Skat.Skat
     ( play
     , showCards
@@ -59,7 +61,7 @@ playersFromDeck deck = [Player Geber (slice 0 9 deck) [] False,
 -- data GamemodeNull =      GamemodeNull
 
 skatFromDeck :: [Card] -> [Card]
-skatFromDeck deck = slice 30 31 deck
+skatFromDeck = slice 30 31
 
 initialStateFromDeck :: [Card] -> SkatState
 initialStateFromDeck deck = ReizPhase {
@@ -145,6 +147,7 @@ playRawOnState oldstate@RunningPhase{turn=whoseTurn, gameMode=gm, currentStich=o
           newstate = oldstate {
                         players = removePlayedCard card $ players oldstate
                      }
+playRawOnState _ _ _ = error "Played on raw-state, but not in PlayingPhase"
 
 determineWinner :: Stich -> (Card -> Card -> Bool) -> PlayerPosition
 determineWinner stich le
@@ -214,9 +217,9 @@ play :: SkatState -> PlayerPosition -> SkatMove -> Hopefully SkatState
 play state pos ShowCards = return $ showCards state pos
 
 play state@RunningPhase{turn=whoseTurn} pos (PlayCard card) = do
-    assert (pos == whoseTurn) "It is not your turn!"
+    assert (pos == whoseTurn) "Es ist nicht dein Zug!"
     assert (playerHasCard state pos card) "You don't have this card, you h4x0r!"
-    assert (gamemodeAllowsCard state pos card) "This card is not compatible to the already played cards"
+    assert (gamemodeAllowsCard state pos card) "Diese Karte ist nicht kompatibel mit den bereits gespielten Karten"
     return . checkGameEnd . playRawOnState state pos $ card
 
 play state@SkatPickingPhase{singlePlayer=Just singlePlayer} pos (PlayCard card) = do
@@ -248,8 +251,8 @@ play state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player (Rei
             Weg -> True
             Reizwert wert -> wert <= 264
 
-    assert (reizHighEnough) "Dein Gebot war zu billig! Gib dir mehr Mühe!"
-    assert (reizLowEnough) "Dein Gebot war zu teuer! Gib dir weniger Mühe!"
+    assert reizHighEnough "Dein Gebot war zu billig! Gib dir mehr Mühe!"
+    assert reizLowEnough "Dein Gebot war zu teuer! Gib dir weniger Mühe!"
     case val of
         Reizwert x ->
             if machine == VorhandNix then
@@ -264,22 +267,23 @@ play state@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=True} player (Rei
                                 else handPickingFromReiz state Vorhand -- hat Vorhand schonmal ja gesagt --> Vorhand spielt. Sonst VorhandNix
                 MittelhandGeber -> handPickingFromReiz state Geber
 
-play ReizPhase{} Vorhand (ReizBid Weg) = throwError "pattern in Reizen does not match"
+play ReizPhase{} Vorhand (ReizBid Weg) = throwError "Gerade wird auf eine Reizansage gewartet, keine Karte."
 
 
 -- Bool: ja / nein?
 play stateOrig@ReizPhase{reizStateMachine=machine, reizAnsagerTurn=False} player (ReizAnswer val) = do
     assert (reizTurn stateOrig == Just player) "Du darfst aktuell keine Reizantwort abgeben!"
     let state = stateOrig {reizAnsagerTurn = True}
-    return $ case val of
-        True -> state
-        False -> case machine of
+    return (if val then
+     state
+        else
+            (case machine of
                 VorhandNix -> error "Answer to VorhandNix, this should never happen"
-                MittelhandVorhand -> stateOrig { reizStateMachine = MittelhandGeber }
+                MittelhandVorhand -> stateOrig {reizStateMachine = MittelhandGeber}
                 MittelhandGeber -> handPickingFromReiz state Mittelhand
-                GeberVorhand -> handPickingFromReiz state Geber
+                GeberVorhand -> handPickingFromReiz state Geber))
 
-play ReizPhase{} _ _ = throwError "pattern in reizAntwort does not match."
+play ReizPhase{} _ _ = throwError "Gerade wird auf eine Reizantwort gewartet, keine Karte."
 
 play state@HandPickingPhase{} pos (PlayHand var) = do
     assert (singlePlayer state == Just pos) "Du bist nicht dran mit Hand auswählen!"

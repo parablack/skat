@@ -38,8 +38,7 @@ data Event
 
 data ServerConfig = ServerConfig
   { configAddress :: String,
-    configPort    :: Int,
-    configNumIds  :: Int
+    configPort    :: Int
   }
 
 reply :: (MonadIO m, WebSocketsData a) => Client -> a -> m ()
@@ -79,6 +78,7 @@ acceptClient availIds eventQ pending = do
   case cid of
     Just num -> do
       connection <- acceptRequest pending
+      -- print $ connection
       generateEvents
         (Client {clientId = num, clientConn = connection})
         (writeChan eventQ)
@@ -88,18 +88,17 @@ acceptClient availIds eventQ pending = do
 
 defaultServerConfig :: ServerConfig
 defaultServerConfig = ServerConfig
-  { configAddress = "0.0.0.0",
-    configPort    = 8080,
-    configNumIds  = 6
+  { configAddress = "0.0.0.0"
+  , configPort    = 8080
   }
 
 runWebSockServer :: MonadIO m => ServerConfig -> (Event -> m ()) -> m ()
 runWebSockServer config handleEvent = do
   eventQ   <- liftIO newChan
-  let n = configNumIds config
-  availIds <- liftIO $ newMVar [1 .. n]
+  availIds <- liftIO $ newMVar [1 .. ]
 
   let run = runServer (configAddress config) (configPort config)
   _ <- liftIO . forkIO . run $ acceptClient availIds eventQ
+
 
   forever $ (liftIO . readChan) eventQ >>= handleEvent

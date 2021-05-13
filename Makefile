@@ -1,5 +1,5 @@
 all: skat-backend/**.hs
-	cd skat-backend && ghc -outputdir /tmp/ -dynamic -O2 main.hs
+	cd skat-backend && ghc -outputdir /tmp/ -dynamic -Wall -Werror -O2 main.hs
 
 static: skat-backend/**.hs
 	cd skat-backend && ghc -outputdir /tmp/ -O2 main.hs
