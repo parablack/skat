@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-import Definitions
-import Skat
+import Skat.Definitions
+import Skat.Skat
 import Serializer
 import Control.Exception
 import Data.List
@@ -10,6 +10,13 @@ import Data.Aeson
 import Data.Map
 import qualified Data.ByteString.Lazy as B
 
+import GameServer.Server
+import Data.List as List
+
+
+state = initialStateFromDeck defaultDeck
+
+{-
 
 fromRight (Left x)  = error "Got left in FromRight"
 fromRight (Right x) = x
@@ -25,3 +32,4 @@ packet1 = "{\"action\":\"showcards\"}"
 packet2 = "{\"action\":\"playcard\", \"card\":{\"name\":\"Jack\",\"suit\":\"Hearts\"}}"
 res1 = eitherDecode packet1 :: Hopefully GameRequest
 res2 = eitherDecode packet2 :: Hopefully GameRequest
+-}

@@ -1,12 +1,12 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts #-}
 
-module GameServer.Server (
-    registerLobby,
-    registerUser,
-    unregisterUser,
-    handleUserAction,
-    joinFreeLobby
-) where
+module GameServer.Server
+    ( registerLobby
+    , registerUser
+    , unregisterUser
+    , handleUserAction
+    , joinFreeLobby
+    ) where
 
 import Control.Monad
 import Control.Monad.Except
@@ -142,11 +142,13 @@ currentTurn state@HandPickingPhase{}  = singlePlayer state
 currentTurn state@RunningPhase{}      = Just $ turn state
 currentTurn       GameFinishedState{} = Nothing
 
+
 compareByMode :: SkatState -> Card -> Card -> Ordering
-compareByMode state a b
-    | (cmpLE a b) && (cmpLE b a) = EQ
-    | cmpLE a b                  = LT
-    | otherwise                  = GT
+compareByMode state card1@(Card _ suit1) card2@(Card _ suit2)
+    | card1 == card2     = EQ
+    | cmpLE card1 card2  = LT
+    | cmpLE card2 card1  = GT
+    | otherwise          = compare suit1 suit2
   where
     cmpLE = case state of
         phase@RunningPhase{} -> cardSmaller $ gameMode phase
@@ -163,8 +165,8 @@ buildPrivateInfo user = do
     return PrivateInfo
         { infoYourPosition = position
         , infoYourTurn     = (currentTurn state == Just position)
-        , infoYourCards    = playerCards player
-        , infoWonCards     = List.sortBy (compareByMode state) $ wonCards player
+        , infoYourCards    = List.sortBy (compareByMode state) $ playerCards player
+        , infoWonCards     = wonCards player
         , infoShowingCards = showsCards player
         , infoResigned     = resigned
         }
