@@ -164,6 +164,8 @@ instance FromJSON GameRequest where
             "join"        -> JoinLobby <$> (obj .: "id" :: Parser Int) <*> (obj .: "position" :: Parser PlayerPosition)
             "leave"       -> return LeaveLobby
             "changepos"   -> ChangePosition <$> (obj .: "position" :: Parser PlayerPosition)
+            "joinspec"    -> SpectateLobby <$> (obj .: "id" :: Parser Int)
+            "leavespec"   -> return LeaveSpectate
             _             -> parseFail "Action unspecified."
 
     parseJSON _ = parseFail "Got no object."

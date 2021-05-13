@@ -2,9 +2,9 @@
 
 module GameServer.Server (
     registerLobby,
-    registerPlayer,
-    unregisterPlayer,
-    handlePlayerAction,
+    registerUser,
+    unregisterUser,
+    handleUserAction,
     joinFreeLobby
 ) where
 
@@ -24,18 +24,18 @@ import Util
 
 
 lookupLobby
-    :: (MonadState ServerData m, MonadError String m) => Player -> m Lobby
-lookupLobby player =
-    dataLobby <$> lookup player
-    >>= maybeToError (show player ++ " is not in a lobby!")
+    :: (MonadState ServerData m, MonadError String m) => User -> m Lobby
+lookupLobby user =
+    dataLobby <$> lookup user
+    >>= maybeToError (show user ++ " is not in a lobby!")
 
 lookupPlayerPosition
-    :: (MonadState LobbyData m, MonadError String m) => Player -> m PlayerPosition
-lookupPlayerPosition player = do
+    :: (MonadState LobbyData m, MonadError String m) => User -> m PlayerPosition
+lookupPlayerPosition user = do
     maybeMatch <- List.find hasPlayer . Map.assocs . dataPositions <$> get
     fst <$> maybeToError errorMessage maybeMatch
-  where hasPlayer = (== Just player) . dataPlayer . snd
-        errorMessage = "Position of " ++ show player ++ " not found!"
+  where hasPlayer = (== Just user) . dataPlayer . snd
+        errorMessage = "Player position of " ++ show user ++ " not found!"
 
 freePositions
     :: MonadState LobbyData m => m [PlayerPosition]
@@ -44,29 +44,28 @@ freePositions =
 
 addPlayerToLobby
     :: (MonadState ServerData m, MonadError String m)
-    => Player -> Lobby -> PlayerPosition -> m ()
-addPlayerToLobby player lobby position = do
-    playerRecord   <- lookup player
+    => User -> Lobby -> PlayerPosition -> m ()
+addPlayerToLobby user lobby position = do
+    userRecord     <- lookup user
     positionRecord <- using lobby $ lookup position
-    when (isJust $ dataLobby playerRecord) $
-        throwError $ (show player) ++ " is already in a lobby!"
+    when (isJust $ dataLobby userRecord) $
+        throwError $ (show user) ++ " is already in a lobby!"
     when (isJust $ dataPlayer positionRecord) $
         throwError $ (show position) ++ " is already used!"
-    insert player playerRecord{ dataLobby = Just lobby }
+    insert user userRecord {dataLobby = Just lobby}
     using lobby $
-        insert position positionRecord{ dataPlayer = Just player }
+        insert position positionRecord {dataPlayer = Just user}
 
 
 removePlayerFromLobby
-    :: (MonadState ServerData m, MonadError String m) => Player -> m ()
-removePlayerFromLobby player = do
-    lobby <- lookupLobby player
+    :: (MonadState ServerData m, MonadError String m) => User -> m ()
+removePlayerFromLobby user = do
+    lobby <- lookupLobby user
     using lobby $ do
-        position <- lookupPlayerPosition player
-        adjust position (\record ->
-            record{ dataPlayer = Nothing, dataResigned = False }
-            )
-    adjust player (\record -> record{ dataLobby = Nothing })
+        position <- lookupPlayerPosition user
+        adjust position $ \record ->
+            record {dataPlayer = Nothing, dataResigned = False}
+    adjust user $ \record -> record {dataLobby = Nothing}
 
 newGame :: (MonadState LobbyData m, MonadIO m) => m ()
 newGame = do
@@ -103,10 +102,10 @@ lobbyNameMap
     :: (MonadState ServerData m, MonadError String m)
     => Lobby -> m (Map.Map PlayerPosition String)
 lobbyNameMap lobby = do
-    players <- using lobby $
+    users <- using lobby $
         catMaybes . map dataPlayer . Map.elems . dataPositions <$> get
-    positionNames <- using lobby $ mapM lookupPlayerPosition players
-    playerNames <- map dataPlayerName <$> mapM lookup players
+    positionNames <- using lobby $ mapM lookupPlayerPosition users
+    playerNames <- map dataUserName <$> mapM lookup users
     return $ Map.fromList $ zip positionNames playerNames
 
 {- =============================================================== -}
@@ -131,19 +130,19 @@ compareByMode state a b
         _                    -> simpleCardLE
 
 buildPrivateInfo
-    :: (MonadState ServerData m, MonadError String m) => Player -> m PrivateInfo
-buildPrivateInfo player = do
-    lobby    <- lookupLobby player
-    position <- using lobby $ lookupPlayerPosition player
+    :: (MonadState ServerData m, MonadError String m) => User -> m PrivateInfo
+buildPrivateInfo user = do
+    lobby    <- lookupLobby user
+    position <- using lobby $ lookupPlayerPosition user
     state    <- using lobby $ dataSkatState <$> get
     resigned <- using lobby $ dataResigned <$> lookup position
-    let statePlayer = playerFromPos state position
+    let player = playerFromPos state position
     return PrivateInfo
         { infoYourPosition = position
         , infoYourTurn     = (currentTurn state == Just position)
-        , infoYourCards    = playerCards statePlayer
-        , infoWonCards     = List.sortBy (compareByMode state) $ wonCards statePlayer
-        , infoShowingCards = showsCards statePlayer
+        , infoYourCards    = playerCards player
+        , infoWonCards     = List.sortBy (compareByMode state) $ wonCards player
+        , infoShowingCards = showsCards player
         , infoResigned     = resigned
         }
 
@@ -250,7 +249,7 @@ buildLobbyInformation lobby@(Lobby num) = do
                     Nothing -> return Nothing
                     Just player -> do
                         record <- lookup player
-                        return $ Just (position, dataPlayerName record)
+                        return $ Just (position, dataUserName record)
             )
     lobbyRecord <- lookup lobby
     return $ LobbyInformation {
@@ -267,43 +266,43 @@ buildLobbyResponse = do
 
 sendLobbies
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Player -> m ()
-sendLobbies player = do
-    record <- lookup player
+    => User -> m ()
+sendLobbies user = do
+    record <- lookup user
     buildLobbyResponse >>= liftIO . dataReply record
 
 broadcastLobbies
     :: (MonadState ServerData m, MonadError String m, MonadIO m) => m ()
 broadcastLobbies = do
     response <- buildLobbyResponse
-    players <- Map.keys . dataPlayers <$> get
-    forM_ players $ \player -> do
-        record <- lookup player
+    users <- Map.keys . dataUsers <$> get
+    forM_ users $ \user -> do
+        record <- lookup user
         when (isNothing . dataLobby $ record) $
             liftIO . dataReply record $ response
 
 {- =============================================================== -}
 
-registerPlayer
+registerUser
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Player -> String -> (GameResponse -> IO ()) -> m ()
-registerPlayer player name onReply = do
-    players <- Map.keys . dataPlayers <$> get
-    if elem player players then
-        throwError $ (show player) ++ " already registered!"
+    => User -> String -> (GameResponse -> IO ()) -> m ()
+registerUser user name onReply = do
+    users <- Map.keys . dataUsers <$> get
+    if elem user users then
+        throwError $ (show user) ++ " already registered!"
     else
-        insert player (PlayerData name Nothing onReply)
-    sendLobbies player
+        insert user (UserData name Nothing onReply)
+    sendLobbies user
 
-unregisterPlayer
+unregisterUser
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Player -> m ()
-unregisterPlayer player = do
-    record <- lookup player
+    => User -> m ()
+unregisterUser user = do
+    record <- lookup user
     case dataLobby record of
         Nothing -> return ()
-        Just _  -> handlePlayerAction player LeaveLobby
-    delete player
+        Just _  -> handleUserAction user LeaveLobby
+    delete user
 
 registerLobby
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
@@ -318,31 +317,31 @@ registerLobby lobby name = do
     broadcastLobbies
 
 
-handlePlayerAction
+handleUserAction
    :: (MonadIO m, MonadState ServerData m, MonadError String m)
-   => Player -> GameRequest -> m ()
+   => User -> GameRequest -> m ()
 
-handlePlayerAction player (MakeMove move) = do
-    lobby <- lookupLobby player
+handleUserAction user (MakeMove move) = do
+    lobby <- lookupLobby user
     using lobby $ do
-        position <- lookupPlayerPosition player
+        position <- lookupPlayerPosition user
         state <- dataSkatState <$> get
         newState <- liftEither $ play state position move
-        modify (\record -> record{ dataSkatState = newState })
+        modify $ \record -> record {dataSkatState = newState}
     broadcastSkatState lobby
 
-handlePlayerAction player (SetName name) = do
-    record <- lookup player
-    insert player record{ dataPlayerName = name }
+handleUserAction user (SetName name) = do
+    record <- lookup user
+    insert user record {dataUserName = name}
     case dataLobby record of
         Just lobby -> broadcastSkatState lobby
         Nothing    -> return ()
     broadcastLobbies
 
-handlePlayerAction player Resign = do
-    lobby <- lookupLobby player
+handleUserAction user Resign = do
+    lobby <- lookupLobby user
     needsRestart <- using lobby $ do
-        position <- lookupPlayerPosition player
+        position <- lookupPlayerPosition user
         adjust position (\record -> record {dataResigned = True})
         checkRestartGame
     when needsRestart $ do
@@ -352,21 +351,21 @@ handlePlayerAction player Resign = do
         broadcastLobbies
     broadcastSkatState lobby
 
-handlePlayerAction client (JoinLobby uid position) = do
+handleUserAction user (JoinLobby uid position) = do
     let lobby = Lobby uid
-    addPlayerToLobby client lobby position
+    addPlayerToLobby user lobby position
     broadcastSkatState lobby
     broadcastLobbies
 
-handlePlayerAction player LeaveLobby = do
-    lobby <- lookupLobby player
-    removePlayerFromLobby player
+handleUserAction user LeaveLobby = do
+    lobby <- lookupLobby user
+    removePlayerFromLobby user
     broadcastSkatState lobby
     broadcastLobbies
 
-handlePlayerAction player (ChangePosition newPlayerPosition) = do
-    lobby <- lookupLobby player
-    oldPlayerPosition <- using lobby $ lookupPlayerPosition player
+handleUserAction user (ChangePosition newPlayerPosition) = do
+    lobby <- lookupLobby user
+    oldPlayerPosition <- using lobby $ lookupPlayerPosition user
     let newPosition position =
             if      position == newPlayerPosition then oldPlayerPosition
             else if position == oldPlayerPosition then newPlayerPosition
@@ -375,20 +374,23 @@ handlePlayerAction player (ChangePosition newPlayerPosition) = do
     broadcastSkatState lobby
     broadcastLobbies
 
-handlePlayerAction _ (SpectateLobby _) = do
+handleUserAction _ (SpectateLobby _) = do
     throwError "SpectateLobby not implemented!"
+
+handleUserAction _ LeaveSpectate = do
+    throwError "LeaveSpectate not implemented!"
 
 
 joinFreeLobby
     :: (MonadState ServerData m, MonadError String m, MonadIO m)
-    => Player -> m ()
-joinFreeLobby player = do
+    => User -> m ()
+joinFreeLobby user = do
     lobbies <- Map.keys . dataLobbies <$> get
     avail <- forM lobbies $ flip using freePositions
     let free = List.find (not . null . snd) $ zip lobbies avail
     case free of
         Just (lobby, position:_) -> do
-            addPlayerToLobby player lobby position
+            addPlayerToLobby user lobby position
             broadcastSkatState lobby
             broadcastLobbies
         _ -> throwError "No free lobby found!"

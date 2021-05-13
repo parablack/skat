@@ -3,8 +3,8 @@
 {-# LANGUAGE FlexibleContexts       #-}
 
 module GameServer.Definitions (
-    Player(..),
-    PlayerData(..),
+    User(..),
+    UserData(..),
     Lobby(..),
     LobbyData(..),
     PositionData(..),
@@ -24,50 +24,52 @@ import Prelude hiding (lookup)
 
 import GameServer.Protocol
 
-import Skat.Definitions hiding (Player, result, players)
+import Skat.Definitions
 import Skat.Skat
 
-newtype Player = Player String
+newtype User = User String
     deriving (Show, Eq, Ord)
 
 newtype Lobby = Lobby Int
     deriving (Show, Eq, Ord)
 
-data PlayerData = PlayerData
-  { dataPlayerName  :: String,
-    dataLobby :: Maybe Lobby,
-    dataReply :: GameResponse -> IO ()
-  }
+data UserData = UserData
+    { dataUserName  :: String
+    , dataLobby     :: Maybe Lobby
+    , dataReply     :: GameResponse -> IO ()
+    }
 
 data LobbyData = LobbyData
-  { dataPositions :: Map.Map PlayerPosition PositionData,
-    dataSkatState :: SkatState,
-    dataLobbyName :: String
-  }
+    { dataPositions  :: Map.Map PlayerPosition PositionData
+    , dataSkatState  :: SkatState
+    , dataLobbyName  :: String
+    , dataSpectators :: [User]
+    }
 
 data PositionData = PositionData
-  { dataPlayer    :: Maybe Player,
-    dataResigned  :: Bool
-  }
+    { dataPlayer   :: Maybe User
+    , dataResigned :: Bool
+    }
 
 data ServerData = ServerData
-  { dataPlayers :: Map.Map Player PlayerData,
-    dataLobbies :: Map.Map Lobby LobbyData
-  }
+    { dataUsers   :: Map.Map User UserData
+    , dataLobbies :: Map.Map Lobby LobbyData
+    }
 
 emptyPositionData :: PositionData
 emptyPositionData = PositionData Nothing False
 
 emptyLobbyData :: LobbyData
 emptyLobbyData = LobbyData
-  { dataPositions = Map.fromList [
+    { dataPositions = Map.fromList [
         (Geber,      emptyPositionData),
         (Vorhand,    emptyPositionData),
         (Mittelhand, emptyPositionData)
-        ],
-    dataSkatState = initialStateFromDeck defaultDeck,
-    dataLobbyName = "[No Name]"
-  }
+        ]
+    , dataSkatState  = initialStateFromDeck defaultDeck
+    , dataLobbyName  = "[No Name]"
+    , dataSpectators = []
+    }
 
 emptyServerData = ServerData Map.empty Map.empty
 emptyServerData :: ServerData
@@ -78,8 +80,8 @@ class (Show i, Ord i) => ServerRecord i s r | i -> s, i -> r where
 
     lookup :: (MonadState s m, MonadError String m) => i -> m r
     lookup key = do
-        result <- Map.lookup key . extractMap <$> get
-        case result of
+        value <- Map.lookup key . extractMap <$> get
+        case value of
             Just record -> return record
             Nothing     -> throwError $ (show key) ++ " not found!"
 
@@ -99,13 +101,13 @@ class (Show i, Ord i) => ServerRecord i s r | i -> s, i -> r where
         (err, newRecord) <- runStateT (runExceptT monad) record
         case err of
             Left message -> throwError message
-            Right result -> insert key newRecord >> return result
+            Right value  -> insert key newRecord >> return value
 
 
-instance ServerRecord Player ServerData PlayerData where
-    extractMap = dataPlayers
+instance ServerRecord User ServerData UserData where
+    extractMap = dataUsers
     modifyMap modifier = modify (\server ->
-        server{ dataPlayers = modifier (dataPlayers server) })
+        server{ dataUsers = modifier (dataUsers server) })
 
 instance ServerRecord Lobby ServerData LobbyData where
     extractMap = dataLobbies

@@ -22,21 +22,21 @@ replyError client err =
 
 handleEvent :: Event -> ExceptT String (StateT ServerData IO) ()
 handleEvent (Connect client) = do
-    let player = Player (show client)
-    registerPlayer player "Anon" (reply client . encode)
-    println $ (show player) ++ " added!"
+    let user = User (show client)
+    registerUser user "Anon" (reply client . encode)
+    println $ (show user) ++ " added!"
 
 handleEvent (Disconnect client cause) = do
-  let player = Player (show client)
-  unregisterPlayer player
-  println $ (show player) ++ " removed! (" ++ show cause ++ ")"
+  let user = User (show client)
+  unregisterUser user
+  println $ (show user) ++ " removed! (" ++ show cause ++ ")"
 
 handleEvent (Message client message) = do
-    let player = Player (show client)
+    let user = User (show client)
     let maybeTAction = MaybeT . return . decodeStrict . encodeUtf8 . pack $ message
     result <- runExceptT $ do
         action <- maybeToExceptT "Couldn't deserialize action!" maybeTAction
-        handlePlayerAction player action
+        handleUserAction user action
     case result of
       Left err -> replyError client err
       Right _  -> return ()

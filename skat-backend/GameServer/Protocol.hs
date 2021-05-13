@@ -22,6 +22,7 @@ data GameRequest
     | JoinLobby Int PlayerPosition
     | ChangePosition PlayerPosition
     | SpectateLobby Int
+    | LeaveSpectate
     deriving (Show, Eq)
 
 

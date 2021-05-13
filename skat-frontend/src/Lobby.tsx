@@ -52,7 +52,7 @@ export const LobbyInput: React.FC<{ ws: WebSocket, state: LobbyState }> = ({ ws,
                   <span>{lobby.names[pos]}</span>
                 ) : (
                   pos === ':eyes:'
-                    ? <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "join-spectator-todo", })) }}>👀</button>
+                    ? <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "joinspec", id: lobby.id })) }}>👀</button>
                     : <button onClick={() => {
                       ws.send(JSON.stringify({ action: "join", id: lobby.id, position: pos }))
                     }}>Mein Platz!</button>
