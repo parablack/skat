@@ -14,6 +14,7 @@ import Control.Monad.State.Lazy (MonadState, get, modify)
 import Data.Maybe
 import qualified Data.List as List
 import qualified Data.Map  as Map
+import qualified Data.Set  as Set
 import Prelude hiding (lookup)
 
 import Skat.Definitions hiding (Player)
@@ -56,7 +57,6 @@ addPlayerToLobby user lobby position = do
     using lobby $
         insert position positionRecord {dataPlayer = Just user}
 
-
 removePlayerFromLobby
     :: (MonadState ServerData m, MonadError String m) => User -> m ()
 removePlayerFromLobby user = do
@@ -65,6 +65,29 @@ removePlayerFromLobby user = do
         position <- lookupPlayerPosition user
         adjust position $ \record ->
             record {dataPlayer = Nothing, dataResigned = False}
+    adjust user $ \record -> record {dataLobby = Nothing}
+
+addSpectatorToLobby
+    :: (MonadState ServerData m, MonadError String m)
+    => User -> Lobby -> m ()
+addSpectatorToLobby user lobby = do
+    userRecord     <- lookup user
+    when (isJust $ dataLobby userRecord) $
+        throwError $ (show user) ++ " is already in a lobby!"
+    spectators <- using lobby $ dataSpectators <$> get
+    adjust lobby $ \record ->
+        record {dataSpectators = Set.insert user spectators}
+    adjust user $ \record -> record {dataLobby = Just lobby}
+
+removeSpectatorFromLobby
+    :: (MonadState ServerData m, MonadError String m) => User -> m ()
+removeSpectatorFromLobby user = do
+    lobby <- lookupLobby user
+    spectators <- using lobby $ dataSpectators <$> get
+    when (Set.notMember user spectators) $
+        throwError $ (show user) ++ " is not spectating!"
+    adjust lobby $ \record ->
+        record {dataSpectators = Set.delete user spectators}
     adjust user $ \record -> record {dataLobby = Nothing}
 
 newGame :: (MonadState LobbyData m, MonadIO m) => m ()
@@ -228,6 +251,7 @@ broadcastSkatState lobby = do
     publicInfo <- buildPublicInfo lobby
     state <- using lobby $ dataSkatState <$> get
     let phaseInfo = buildPhaseInfo state
+
     positionRecords <- using lobby $ Map.elems . dataPositions <$> get
     forM_ positionRecords $ \record ->
         case dataPlayer record of
@@ -237,6 +261,11 @@ broadcastSkatState lobby = do
                 playerRecord <- lookup player
                 liftIO . dataReply playerRecord $
                     StatePlayerResponse phaseInfo publicInfo privateInfo
+
+    spectators <- using lobby $ dataSpectators <$> get
+    forM_ spectators $ \user -> do
+        record <- lookup user
+        liftIO . dataReply record $ StateSpectatorResponse phaseInfo publicInfo
 
 buildLobbyInformation
     :: (MonadState ServerData m, MonadError String m)
@@ -351,17 +380,23 @@ handleUserAction user Resign = do
         broadcastLobbies
     broadcastSkatState lobby
 
-handleUserAction user (JoinLobby uid position) = do
-    let lobby = Lobby uid
+handleUserAction user (JoinLobby lobbyId position) = do
+    let lobby = Lobby lobbyId
     addPlayerToLobby user lobby position
     broadcastSkatState lobby
     broadcastLobbies
 
 handleUserAction user LeaveLobby = do
     lobby <- lookupLobby user
-    removePlayerFromLobby user
-    broadcastSkatState lobby
-    broadcastLobbies
+    spectators <- using lobby $ dataSpectators <$> get
+    if Set.member user spectators
+        then do
+            removeSpectatorFromLobby user
+            broadcastLobbies
+        else do
+            removePlayerFromLobby user
+            broadcastSkatState lobby
+            broadcastLobbies
 
 handleUserAction user (ChangePosition newPlayerPosition) = do
     lobby <- lookupLobby user
@@ -374,11 +409,10 @@ handleUserAction user (ChangePosition newPlayerPosition) = do
     broadcastSkatState lobby
     broadcastLobbies
 
-handleUserAction _ (SpectateLobby _) = do
-    throwError "SpectateLobby not implemented!"
-
-handleUserAction _ LeaveSpectate = do
-    throwError "LeaveSpectate not implemented!"
+handleUserAction user (SpectateLobby lobbyId) = do
+    let lobby = Lobby lobbyId
+    addSpectatorToLobby user lobby
+    broadcastSkatState lobby
 
 
 joinFreeLobby

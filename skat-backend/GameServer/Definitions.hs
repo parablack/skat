@@ -19,6 +19,7 @@ import Control.Monad
 import Control.Monad.Except
 import Control.Monad.State.Lazy (MonadState, get, modify, StateT, runStateT)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.Maybe
 import Prelude hiding (lookup)
 
@@ -43,7 +44,7 @@ data LobbyData = LobbyData
     { dataPositions  :: Map.Map PlayerPosition PositionData
     , dataSkatState  :: SkatState
     , dataLobbyName  :: String
-    , dataSpectators :: [User]
+    , dataSpectators :: Set.Set User
     }
 
 data PositionData = PositionData
@@ -68,7 +69,7 @@ emptyLobbyData = LobbyData
         ]
     , dataSkatState  = initialStateFromDeck defaultDeck
     , dataLobbyName  = "[No Name]"
-    , dataSpectators = []
+    , dataSpectators = Set.empty
     }
 
 emptyServerData = ServerData Map.empty Map.empty
