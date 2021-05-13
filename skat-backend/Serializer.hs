@@ -57,10 +57,10 @@ instance ToJSON ScoringResult where
 
 instance ToJSON PublicInfo where
     toJSON info =
-        object [ "turn"           .= infoTurn info
-               , "cards"          .= Map.mapKeys show (infoCards info)
-               , "names"          .= Map.mapKeys show (infoNames info)
-               , "pubNumResigned" .= infoNumResigned info
+        object [ "turn"        .= infoTurn info
+               , "cards"       .= Map.mapKeys show (infoCards info)
+               , "names"       .= Map.mapKeys show (infoNames info)
+               , "numResigned" .= infoNumResigned info
                ]
 
 instance ToJSON PrivateInfo where
@@ -116,20 +116,20 @@ instance ToJSON LobbyInformation where
 
 instance ToJSON GameResponse where
     toJSON (StatePlayerResponse phaseInfo publicInfo privateInfo) =
-        object [ "type"    .= pack "playerState"
+        object [ "type"    .= pack "PlayerState"
                , "phase"   .= phaseInfo
                , "public"  .= publicInfo
                , "private" .= privateInfo
                ]
 
     toJSON (StateSpectatorResponse phaseInfo publicInfo) =
-        object [ "type"   .= pack "spectatorState"
+        object [ "type"   .= pack "SpectatorState"
                , "phase"  .= phaseInfo
                , "public" .= publicInfo
                ]
 
     toJSON (LobbyResponse lobbies) =
-        object [ "type"    .= pack "lobbyState"
+        object [ "type"    .= pack "LobbyState"
                , "lobbies" .= lobbies
                ]
 

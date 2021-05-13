@@ -135,9 +135,9 @@ export const GameInput: React.FC<{ ws: WebSocket, phase: Phase, publicInfo: Publ
                 ? <TableStack cards={displayStich.map(([card, player]) => [card, resolveNickname(player)])} />
                 : null}
             </div>
-            <span style={{ width: '4em', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>👀</button>
-              <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
+            <span style={{ width: '4em', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+              <button disabled={privateInfo?.showingCards} className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>👀</button>
+              <button disabled={privateInfo?.resigned} className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
                 <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '100%' }}>
                   <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>🏳️</span>
                   <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-40%, -85%)', fontSize: '.5em', color: 'black' }}>
@@ -145,7 +145,15 @@ export const GameInput: React.FC<{ ws: WebSocket, phase: Phase, publicInfo: Publ
                   </span>
                 </div>
               </button>
-              <button className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "leave", })) }}>🚪</button>
+              <button className="unicode-button" onClick={(_) => {
+                let name = prompt("Enter your name")
+                if (name) {
+                  localStorage.setItem("nickname", name)
+                  ws.send(JSON.stringify({ action: "setname", name }))
+                }
+              }
+              }>✏️</button>
+              <button className="unicode-button" style={{ marginBottom: 0 }} onClick={(_) => { ws.send(JSON.stringify({ action: "leave", })) }}>🚪</button>
             </span>
           </div>
 
@@ -210,9 +218,9 @@ export const App: React.FC<{ ws: WebSocket }> = ({ ws }) => {
         </button>
       </h1>
     </div>
-  } else if (state.type === "lobby") {
+  } else if (state.type === 'LobbyState') {
     return <LobbyInput ws={ws} state={state} />
-  } else if (state.type === 'playerState') {
+  } else if (state.type === 'SpectatorState') {
     return <GameInput ws={ws} phase={state.phase} publicInfo={state.public} />
   } else {
     return <GameInput ws={ws} phase={state.phase} publicInfo={state.public} privateInfo={state.private} />

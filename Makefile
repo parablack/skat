@@ -16,6 +16,10 @@ clean:
 watch:
 	fd -e hs | entr make
 
+.PHONY: run
+run: all
+	cd skat-backend && ./main
+
 frontend: skat-frontend/src/*.tsx
 	cd skat-frontend && yarn build
 

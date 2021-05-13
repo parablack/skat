@@ -13,8 +13,8 @@ export type GameMode = { kind: "Ramsch" | "Null" | "Grand" } | {
 
 export interface ReizPhase {
   phase: "ReizPhase",
-  reizTurn: Player,
-  reizBid: number,
+  isAnsagerTurn: boolean,
+  bid: number,
 }
 
 export interface PickingPhase {
@@ -64,14 +64,14 @@ export interface EmptyState {
 }
 
 export interface PlayerState {
-  type: "playerState",
+  type: "PlayerState",
   phase: Phase,
   public: PublicInfo,
   private: PrivateInfo,
 }
 
 export interface SpectatorState {
-  type: "spectatorState",
+  type: "SpectatorState",
   phase: Phase,
   public: PublicInfo,
   private: PrivateInfo,
@@ -85,7 +85,7 @@ export interface Lobby {
 
 
 export interface LobbyState {
-  type: "lobby",
+  type: "LobbyState",
   lobbies: Lobby[],
 }
 

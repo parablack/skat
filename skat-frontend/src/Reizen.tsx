@@ -10,12 +10,12 @@ export const ReizInput: React.FC<{ ws: WebSocket, phase: ReizPhase, publicInfo: 
         textAlign: 'center',
         verticalAlign: 'center'
       }}>
-        Es wurde {phase.reizBid === 17 ? <>noch nix</> : phase.reizBid} geboten.
+        Es wurde {phase.bid === 17 ? <>noch nix</> : phase.bid} geboten.
       </div>
     )
   }
 
-  if (phase.reizTurn) {
+  if (phase.isAnsagerTurn) {
     return (
       <div>
         Du darfst
@@ -24,10 +24,10 @@ export const ReizInput: React.FC<{ ws: WebSocket, phase: ReizPhase, publicInfo: 
           <input ref={textInput}
             style={{ textAlign: "center" }}
             type="number"
-            min={phase.reizBid}
+            min={phase.bid}
             max="264"
             size={5}
-            defaultValue={phase.reizBid + 1}
+            defaultValue={phase.bid + 1}
           />
           <button className="unicode-button" onClick={() => {
             ws.send(JSON.stringify({
@@ -48,7 +48,7 @@ export const ReizInput: React.FC<{ ws: WebSocket, phase: ReizPhase, publicInfo: 
   } else {
     return (
       <div>
-        Es wurde {phase.reizBid} geboten:
+        Es wurde {phase.bid} geboten:
         <br />
         <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
           <button className="unicode-button" onClick={() => {
@@ -77,7 +77,7 @@ export const PickingInput: React.FC<{ ws: WebSocket, phase: PickingPhase, public
   if (!privateInfo || !privateInfo.yourTurn) {
     return <h1>
       {publicInfo.names[publicInfo.turn!] || publicInfo.turn!}
-      wählt das {{
+      {' '} wählt {{
         DiscardingSkat: 'den Skat',
         PickingHand: 'Hand/nicht Hand',
         PickingGamemode: 'das Spiel'

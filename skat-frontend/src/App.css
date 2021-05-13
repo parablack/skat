@@ -62,3 +62,8 @@
 .unicode-button:active {
   transform: translateY(5%);
 }
+
+.unicode-button:disabled {
+  box-shadow: none;
+  cursor: default;
+}
