@@ -1,19 +1,15 @@
 import { FinishedPhase, PublicInfo } from "./State"
 
 export const Scoreboard: React.FC<{ phase: FinishedPhase, publicInfo: PublicInfo }> = ({ phase, publicInfo }) => {
-
-  let sum = Object.values(phase.scores).reduce((x, y) => x + y, 0)
-
-  let resultName = publicInfo.names[phase.result[0]] || phase.result[0]
-  let resultWon = phase.result[1];
-  let resultPoints = phase.result[2];
-  let resultUeberreizt = phase.result[3];
+  const { position, hasWon, gameValue, hasUeberreizt } = phase.scoringResult
+  const sum = Object.values(phase.scores).reduce((x, y) => x + y, 0)
+  const resultName = publicInfo.names[position] || position
 
   return <div>
-    {resultName} hat {resultWon ? <>gewonnen</> :
-      resultUeberreizt ? <>sich überreizt 😢😢😢</> : <>verloren 😢</>}!
-        <br /> Das Spiel war {resultPoints} Punkte wert!
-        <br /> Damit bekommt {resultName} {resultWon ? resultPoints : -2 * resultPoints} Punkte.
+    {resultName} hat {hasWon ? <>gewonnen</> :
+      hasUeberreizt ? <>sich überreizt 😢😢😢</> : <>verloren 😢</>}!
+        <br /> Das Spiel war {gameValue} Punkte wert!
+        <br /> Damit bekommt {resultName} {hasWon ? gameValue : -2 * gameValue} Punkte.
         <table>
       <tbody>
         {Object.entries(phase.scores).map(([name, score]) =>

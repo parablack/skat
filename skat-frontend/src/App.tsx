@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { EMPTY_STATE, Card as ICard, Stich, Phase, PublicInfo, PrivateInfo } from './State';
 import { geileDeutschMap, geileFarbenMap, geileMap } from './Cards/SimpleCard';
 import { Card } from './Cards/ImageCard';
-import { YourHand, OpponentHands } from './Hand';
+import { YourHand, OpponentHands, Hand } from './Hand';
 import { Scoreboard } from './Scoreboard';
 import { ReizInput, PickingInput } from './Reizen';
 import { LobbyInput } from './Lobby';
@@ -74,7 +74,7 @@ export const GameInput: React.FC<{ ws: WebSocket, phase: Phase, publicInfo: Publ
   if (phase.phase === "RunningPhase") {
     displayStich = phase.currentStich.length === 0 ? phase.lastStich : phase.currentStich;
   } else if (phase.phase === "FinishedPhase") {
-    displayStich = phase.currentStich
+    displayStich = phase.lastStich
   }
 
   return (
@@ -100,16 +100,14 @@ export const GameInput: React.FC<{ ws: WebSocket, phase: Phase, publicInfo: Publ
           height: '100%',
           width: '50vw',
         }}>
-          {privateInfo !== undefined ? (
-            <OpponentHands
-              publicInfo={publicInfo}
-              ownPosition={privateInfo.yourPosition}
-              onChangePos={(pos) => ws.send(
-                JSON.stringify({ action: "changepos", position: pos })
-              )}
-              statusElement={<SieSpielen phase={phase} publicInfo={publicInfo} />}
-            />
-          ) : null}
+          <OpponentHands
+            publicInfo={publicInfo}
+            ownPosition={privateInfo?.yourPosition || "Geber"}
+            onChangePos={(pos) => ws.send(
+              JSON.stringify({ action: "changepos", position: pos })
+            )}
+            statusElement={<SieSpielen phase={phase} publicInfo={publicInfo} />}
+          />
 
           <div style={{
             display: "flex",
@@ -136,8 +134,8 @@ export const GameInput: React.FC<{ ws: WebSocket, phase: Phase, publicInfo: Publ
                 : null}
             </div>
             <span style={{ width: '4em', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-              <button disabled={privateInfo?.showingCards} className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>👀</button>
-              <button disabled={privateInfo?.resigned} className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
+              <button disabled={!privateInfo || privateInfo.showingCards} className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "showcards", })) }}>👀</button>
+              <button disabled={!privateInfo || privateInfo.resigned} className="unicode-button" onClick={(_) => { ws.send(JSON.stringify({ action: "resign", })) }}>
                 <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '100%' }}>
                   <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>🏳️</span>
                   <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-40%, -85%)', fontSize: '.5em', color: 'black' }}>
@@ -172,7 +170,14 @@ export const GameInput: React.FC<{ ws: WebSocket, phase: Phase, publicInfo: Publ
                   }))
                 }} />
             </span>
-          ) : null}
+          ) : (
+            <Hand
+              cards={publicInfo.cards['Geber']}
+              theta={27 * Math.PI / 180}
+              overlap={0.5}
+              scale={1}
+            />
+          )}
         </div>
       </section>
     </div>

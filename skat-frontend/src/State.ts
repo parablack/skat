@@ -37,9 +37,14 @@ export interface RunningPhase {
 export interface FinishedPhase {
   phase: "FinishedPhase",
   // player, won, game value, überreizt?
-  result: [string, boolean, number, boolean],
+  scoringResult: {
+    position: Player,
+    hasWon: boolean,
+    gameValue: number,
+    hasUeberreizt: boolean,
+  },
   scores: { [player: string]: number },
-  currentStich: Stich
+  lastStich: Stich
 }
 
 export interface PublicInfo {

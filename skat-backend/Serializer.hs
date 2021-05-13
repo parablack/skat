@@ -54,7 +54,7 @@ instance ToJSON ScoringResult where
        object [ "position"      .= scoringPosition result
               , "hasWon"        .= scoringHasWon result
               , "gameValue"     .= scoringGameValue result
-              , "HasUeberreizt" .= scoringHasUeberreizt result
+              , "hasUeberreizt" .= scoringHasUeberreizt result
               ]
 
 instance ToJSON PublicInfo where

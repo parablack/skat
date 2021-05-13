@@ -74,7 +74,7 @@ interface IHandProps {
     scale: number
 }
 
-const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale }) => {
+export const Hand: React.FC<IHandProps> = ({ cards, onClickCard, theta, overlap, scale }) => {
     return (<div style={{
         display: 'flex',
         justifyContent: 'center',
@@ -112,7 +112,7 @@ export const YourHand: React.FC<{ publicInfo: PublicInfo, privateInfo: PrivateIn
             theta={27 * Math.PI / 180}
             overlap={0.5}
             scale={1}
-        ></Hand>
+        />
         <div style={{
             color: privateInfo.yourTurn ? "red" : "white",
             margin: "0.5em"
