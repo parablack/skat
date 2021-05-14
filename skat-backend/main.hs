@@ -34,7 +34,7 @@ isCardAllowed gm stich myCards card =
 
 makeSimpleAIMove :: GameResponse -> Maybe GameRequest
 makeSimpleAIMove (StatePlayerResponse phaseInfo publicInfo privateInfo) =
-    if infoNumResigned publicInfo > 0 then
+    if infoNumResigned publicInfo > 1 && not (infoResigned privateInfo) then
         Just $ Resign
     else if not (infoYourTurn privateInfo) then
         Nothing
@@ -122,7 +122,7 @@ main = do
         registerLobby (Lobby 2) "Lobby 2"
 
         let bot1 = User "Bot 1"
-        registerBot bot1 "Simple Bot" gameServerChan simpleAI
+        registerBot bot1 "Simple Bot \129302" gameServerChan simpleAI
         handleUserAction bot1 $ JoinLobby 2 Geber
 
         forever $ (liftIO . readChan $ gameServerChan) >>=
