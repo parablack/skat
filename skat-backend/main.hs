@@ -4,6 +4,7 @@ import Control.Concurrent
 import Control.Monad.Except
 import Control.Monad.State.Lazy
 import Data.Aeson
+import qualified Data.List as List
 import Data.Text
 import Data.Text.Encoding
 import System.IO
@@ -18,12 +19,58 @@ import WebSockServer
 
 type AI = Chan (Either String GameResponse) -> (GameRequest-> IO ()) -> IO ()
 
+-- TODO copied
+isCardAllowed :: GameMode -> Stich -> [Card] -> Card -> Bool
+isCardAllowed gm stich myCards card =
+    case stich of
+        [] -> True
+        lst -> let firstCardInStich = fst $ List.last lst
+                   compatCheck      = cardsCompatible gm
+                in
+                    -- alles easy, Karte passt
+                    compatCheck firstCardInStich card
+                    -- drauflegen falls keine Karte mehr dort ist
+                    || not (List.any (compatCheck firstCardInStich) myCards)
+
+makeSimpleAIMove :: GameResponse -> Maybe GameRequest
+makeSimpleAIMove (StatePlayerResponse phaseInfo publicInfo privateInfo) =
+    if infoNumResigned publicInfo > 0 then
+        Just $ Resign
+    else if not (infoYourTurn privateInfo) then
+        Nothing
+    else case phaseInfo of
+        phase@ReizPhaseInfo{} ->
+            if infoIsAnsagerTurn phase
+                then Just . MakeMove $ ReizBid Weg
+                else Just . MakeMove $ ReizAnswer False
+        PickingPhaseInfo{} ->
+            Nothing
+
+        phase@RunningPhaseInfo{} ->
+            let
+                myCards   = infoYourCards privateInfo
+                mode      = infoGameMode phase
+                currStich = infoCurrentStich phase
+                isAllowd  = isCardAllowed mode currStich myCards
+                card      = List.head . List.filter isAllowd $ myCards
+            in
+                Just . MakeMove $ PlayCard card
+
+        FinishedPhaseInfo{} ->
+            Nothing
+
+makeSimpleAIMove _ = Nothing
+
 simpleAI :: AI
-simpleAI inChan _ =
+simpleAI inChan sendRequest =
     forever $ readChan inChan >>=
         \case
-            Left err -> println $ "Simple AI error: " ++ err
-            Right _  -> return ()
+            Left err       -> println $ "Simple AI error: " ++ err
+            Right response -> case makeSimpleAIMove response of
+                Just request -> do
+                    threadDelay 3000000 -- TODO
+                    sendRequest request
+                Nothing      -> return ()
 
 registerBot
     :: (MonadIO m, MonadError String m, MonadState ServerData m)
