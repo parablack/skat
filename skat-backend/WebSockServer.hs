@@ -77,11 +77,11 @@ acceptClient availIds eventQ pending = do
   cid <- takeId availIds
   case cid of
     Just num -> do
-      connection <- acceptRequest pending
-      -- print $ connection
-      generateEvents
-        (Client {clientId = num, clientConn = connection})
-        (writeChan eventQ)
+      (do connection <- acceptRequest pending
+          generateEvents
+            (Client {clientId = num, clientConn = connection})
+            (writeChan eventQ)
+        ) `catch` (\(SomeException err) -> print err)
       putId availIds num
     Nothing -> do
       rejectRequestWith pending defaultRejectRequest
