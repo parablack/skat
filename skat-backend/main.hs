@@ -75,7 +75,7 @@ main = do
         registerLobby (Lobby 2) "Lobby 2"
 
         let bot1 = User "Bot 1"
-        registerBot bot1 "Simple Bot 🤖" gameServerChan simpleAI
+        registerBot bot1 "Simple Bot" gameServerChan simpleAI
         handleUserAction bot1 $ JoinLobby 2 Geber
 
         forever $ (liftIO . readChan $ gameServerChan) >>=
