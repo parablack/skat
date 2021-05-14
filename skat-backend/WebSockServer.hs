@@ -14,6 +14,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Text
 import Network.WebSockets
+import Util
 
 type ClientId = Int
 
@@ -97,8 +98,9 @@ runWebSockServer config handleEvent = do
   eventQ   <- liftIO newChan
   availIds <- liftIO $ newMVar [1 .. ]
 
+  println $ "listening on " ++ configAddress config ++ ":" ++ show (configPort config)
+
   let run = runServer (configAddress config) (configPort config)
   _ <- liftIO . forkIO . run $ acceptClient availIds eventQ
-
 
   forever $ (liftIO . readChan) eventQ >>= handleEvent
