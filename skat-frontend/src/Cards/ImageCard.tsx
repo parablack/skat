@@ -36,6 +36,13 @@ const jackImages: { [suit: string]: any } = {
   "Spades": image("spades-jack", 4.5),
 }
 
+const queenImages: { [suit: string]: any } = {
+  "Diamonds": image("diamonds-queen", 5, 0, -10),
+  "Hearts": image("hearts-queen", 5, 0, -10),
+  "Clubs": image("clubs-queen", 5, 0, -10),
+  "Spades": image("spades-queen", 5, 0, -10),
+}
+
 const kingImages: { [suit: string]: any } = {
   "Diamonds": image("diamonds-king", 5, 0, 15),
   "Hearts": image("hearts-king", 5, 0, 15),
@@ -52,6 +59,7 @@ const aceImages: { [suit: string]: any } = {
 
 const specialImages: { [name: string]: { [suit: string]: any } } = {
   "Jack": jackImages,
+  "Queen": queenImages,
   "King": kingImages,
   "Ace": aceImages
 }
@@ -141,7 +149,7 @@ const NumbersBottom: React.FC<{ card: ICard }> = ({ card }) => {
 
 const SpecialCenter: React.FC<{ card: ICard }> = ({ card }) => {
   const { suit, name } = card;
-  if (["Jack", "King", "Ace"].includes(name)) { // TODO queen
+  if (["Jack", "King", "Queen", "Ace"].includes(name)) {
     return <>
       <div className="position-center">
         {specialImages[name][suit]}

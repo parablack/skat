@@ -34,7 +34,7 @@ isCardAllowed gm stich myCards card =
 
 makeSimpleAIMove :: GameResponse -> Maybe GameRequest
 makeSimpleAIMove (StatePlayerResponse phaseInfo publicInfo privateInfo) =
-    if infoNumResigned publicInfo > 1 && not (infoResigned privateInfo) then
+    if infoNumResigned publicInfo > 0 && not (infoResigned privateInfo) then
         Just $ Resign
     else if not (infoYourTurn privateInfo) then
         Nothing
