@@ -13,6 +13,8 @@ import qualified Data.ByteString.Lazy as B
 import GameServer.Server
 import Data.List as List
 
+import Skat.GameModes
+
 
 state = initialStateFromDeck defaultDeck
 

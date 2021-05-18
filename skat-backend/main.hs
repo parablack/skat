@@ -17,14 +17,16 @@ import GameServer.Server
 import Util
 import WebSockServer
 
+
 type AI = Chan (Either String GameResponse) -> (GameRequest-> IO ()) -> IO ()
+
 
 -- TODO copied
 isCardAllowed :: GameMode -> Stich -> [Card] -> Card -> Bool
 isCardAllowed gm stich myCards card =
     case stich of
         [] -> True
-        lst -> let firstCardInStich = fst $ List.last lst
+        lst -> let firstCardInStich = fst $ List.head lst
                    compatCheck      = cardsCompatible gm
                 in
                     -- alles easy, Karte passt
