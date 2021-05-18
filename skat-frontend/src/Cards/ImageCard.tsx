@@ -64,6 +64,13 @@ const specialImages: { [name: string]: { [suit: string]: any } } = {
   "Ace": aceImages
 }
 
+const colorMap : { [suit: string]: string } = {
+  "Diamonds": "card-color-diamonds",
+  "Hearts":   "card-color-hearts",
+  "Clubs":    "card-color-clubs",
+  "Spades":   "card-color-spades"
+}
+
 const Corner: React.FC<{ card: ICard }> = ({ card }) => {
   const { suit, name } = card;
   return <>
@@ -166,11 +173,8 @@ export const Card: React.FC<{
   const { suit } = card
   return <>
     <div
-      className="card"
+      className={"card " + colorMap[suit]}
       onClick={onClick}
-      style={{
-        color: (suit === "Diamonds" || suit === "Hearts") ? "red" : "black" // geileFarbenMap[suit]
-      }}
     >
       <div className="position-top">
         <Corner card={card} />

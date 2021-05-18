@@ -34,41 +34,42 @@ isCardAllowed gm stich myCards card =
                     -- drauflegen falls keine Karte mehr dort ist
                     || not (List.any (compatCheck firstCardInStich) myCards)
 
-makeSimpleAIMove :: GameResponse -> Maybe GameRequest
+makeSimpleAIMove :: GameResponse -> IO (Maybe GameRequest)
 makeSimpleAIMove (StatePlayerResponse phaseInfo publicInfo privateInfo) =
     if infoNumResigned publicInfo > 0 && not (infoResigned privateInfo) then
-        Just $ Resign
+        return . Just $ Resign
     else if not (infoYourTurn privateInfo) then
-        Nothing
+        return Nothing
     else case phaseInfo of
         phase@ReizPhaseInfo{} ->
             if infoIsAnsagerTurn phase
-                then Just . MakeMove $ ReizBid Weg
-                else Just . MakeMove $ ReizAnswer False
+                then return . Just . MakeMove $ ReizBid Weg
+                else return . Just . MakeMove $ ReizAnswer False
         PickingPhaseInfo{} ->
-            Nothing
+            return Nothing
 
         phase@RunningPhaseInfo{} ->
             let
                 myCards   = infoYourCards privateInfo
                 mode      = infoGameMode phase
                 currStich = infoCurrentStich phase
-                isAllowd  = isCardAllowed mode currStich myCards
-                card      = List.head . List.filter isAllowd $ myCards
-            in
-                Just . MakeMove $ PlayCard card
+                isAllowed  = isCardAllowed mode currStich myCards
+            in do
+                possibleCards <- shuffle . List.filter isAllowed $ myCards
+                return . Just . MakeMove . PlayCard . List.head $ possibleCards
 
         FinishedPhaseInfo{} ->
-            Nothing
+            return Nothing
 
-makeSimpleAIMove _ = Nothing
+makeSimpleAIMove _ = return Nothing
 
 simpleAI :: AI
 simpleAI inChan sendRequest =
     forever $ readChan inChan >>=
         \case
             Left err       -> println $ "Simple AI error: " ++ err
-            Right response -> case makeSimpleAIMove response of
+            Right response ->
+                makeSimpleAIMove response >>= \case
                 Just request -> do
                     threadDelay 3000000 -- TODO
                     sendRequest request

@@ -1,3 +1,31 @@
+.card-color-clubs {
+    color: black;
+}
+.card-color-clubs img {
+    filter: brightness(0) saturate(100%);
+}
+.card-color-hearts {
+    color: red;
+}
+.card-color-hearts img {
+    filter: brightness(0) saturate(100%)
+            invert(21%) sepia(62%) saturate(6444%) hue-rotate(354deg) brightness(99%) contrast(125%);
+}
+.card-color-spades {
+    color: #007000;
+}
+.card-color-spades img {
+    filter: brightness(0) saturate(100%)
+            invert(24%) sepia(91%) saturate(1124%) hue-rotate(89deg) brightness(102%) contrast(106%);
+}
+.card-color-diamonds {
+    color: orange;
+}
+.card-color-diamonds img {
+    filter: brightness(0) saturate(100%)
+            invert(77%) sepia(65%) saturate(3873%) hue-rotate(360deg) brightness(102%) contrast(101%);
+}
+
 .card {
     display: inline-block;
     position: relative;
